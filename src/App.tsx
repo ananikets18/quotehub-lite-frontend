@@ -81,7 +81,12 @@ function App() {
   // Search
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Load quotes
+  // Pagination states
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Load initial quotes
   useEffect(() => {
     const loadQuotes = async () => {
       try {
@@ -92,6 +97,7 @@ function App() {
           ? response
           : response.data || response.data?.data || [];
         setQuotes(data);
+        if (data.length === 0) setHasMore(false);
       } catch (err) {
         console.error('Failed to fetch quotes:', err);
         setError('Failed to load quotes. Is the backend running?');
@@ -101,6 +107,36 @@ function App() {
     };
     loadQuotes();
   }, []);
+
+  const handleLoadMore = async () => {
+    if (loadingMore || !hasMore) return;
+    try {
+      setLoadingMore(true);
+      const nextPage = page + 1;
+      const response = await fetchQuotes(nextPage);
+      const data = Array.isArray(response)
+        ? response
+        : response.data || response.data?.data || [];
+      
+      if (data.length === 0) {
+        setHasMore(false);
+      } else {
+        // Filter out duplicates just in case
+        setQuotes(prev => {
+          const newQuotes = data.filter((q: QuoteType) => !prev.some(p => p.id === q.id));
+          return [...prev, ...newQuotes];
+        });
+        setPage(nextPage);
+        // If the returned data is very small, we might have hit the end
+        if (data.length < 10) setHasMore(false);
+      }
+    } catch (err) {
+      console.error('Failed to load more quotes:', err);
+      showToast('Failed to load more quotes', 'error');
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   // Filtered + searched quotes
   const filteredQuotes = quotes.filter(q => {
@@ -398,6 +434,20 @@ function App() {
                   ))
                 )}
               </div>
+
+              {/* Load More Button */}
+              {!loading && displayedQuotes.length > 0 && hasMore && !searchQuery && (
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem' }}>
+                  <button
+                    className="nav-btn-outline"
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    style={{ padding: '0.75rem 2rem' }}
+                  >
+                    {loadingMore ? 'Loading...' : 'Load More'}
+                  </button>
+                </div>
+              )}
             </div>
           </main>
         } />
