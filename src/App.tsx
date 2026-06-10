@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import { fetchQuotes, submitQuote, login, signup, logout } from './api';
 import { QuoteCard, QuoteCardSkeleton } from './components/QuoteCard';
 import type { Quote as QuoteType } from './components/QuoteCard';
+import { QuoteDetail } from './components/QuoteDetail';
 import { PenLine, Search, LogOut, AlertCircle, Feather, BookOpen } from 'lucide-react';
 import './index.css';
 
@@ -22,6 +24,8 @@ const getErrorMessage = (err: unknown, fallback: string) => {
 };
 
 function App() {
+  const location = useLocation();
+  const backgroundLocation = location.state && location.state.backgroundLocation;
   const [quotes, setQuotes] = useState<QuoteType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -274,126 +278,151 @@ function App() {
         </div>
       </nav>
 
-      {/* ───── Main ───── */}
-      <main>
-        <div className="container">
+      {/* ───── Routing & Main ───── */}
+      <Routes location={backgroundLocation || location}>
+        <Route path="/" element={
+          <main>
+            <div className="container">
 
-          {/* Hero */}
-          <section className="hero">
-            <div className="hero-eyebrow">
-              <Feather size={11} />
-              For writers, readers &amp; thinkers
-            </div>
-            <h1 className="hero-title">
-              A Haven for{' '}
-              <span className="gradient-text">Words &amp; Wisdom</span>
-            </h1>
-            <p className="hero-sub">
-              Discover quotes that move you, share words that define you,
-              and build a collection of the phrases that shape your world.
-            </p>
-            <div className="hero-cta-row">
-              {currentUser ? (
-                <button className="btn-hero-primary" onClick={() => setShowModal(true)}>
-                  <PenLine size={16} />
-                  Share a Quote
-                </button>
-              ) : (
-                <>
-                  <button className="btn-hero-primary" onClick={() => setShowAuthModal('signup')}>
-                    <Feather size={16} />
-                    Start Your Collection
-                  </button>
-                  <button className="btn-hero-secondary" onClick={() => setShowAuthModal('login')}>
-                    Already a member?
-                  </button>
-                </>
-              )}
-            </div>
-            <div className="hero-stats">
-              <div className="stat-item">
-                <span className="stat-number">
-                  {loading ? '…' : quotes.length.toLocaleString()}+
-                </span>
-                <span className="stat-label">Quotes</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">∞</span>
-                <span className="stat-label">Inspiration</span>
-              </div>
-              <div className="stat-item">
-                <span className="stat-number">
-                  <BookOpen size={20} />
-                </span>
-                <span className="stat-label">Curated Daily</span>
-              </div>
-            </div>
-          </section>
-
-          {/* Error Banner */}
-          {error && (
-            <div className="error-banner" role="alert">
-              <AlertCircle size={16} style={{ display: 'inline', marginRight: '0.5rem' }} />
-              {error}
-            </div>
-          )}
-
-          {/* Section Header + Filters */}
-          <div className="section-header">
-            <h2 className="section-title">
-              {searchQuery
-                ? `Results for "${searchQuery}"`
-                : activeFilter === 'all' ? 'All Quotes'
-                  : activeFilter === 'recent' ? 'Recently Added'
-                    : 'Trending Now'}
-            </h2>
-            {!searchQuery && (
-              <div className="filter-tabs" role="tablist">
-                {(['all', 'recent', 'trending'] as const).map(f => (
-                  <button
-                    key={f}
-                    role="tab"
-                    aria-selected={activeFilter === f}
-                    className={`filter-tab${activeFilter === f ? ' active' : ''}`}
-                    onClick={() => setActiveFilter(f)}
-                  >
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Masonry Grid */}
-          <div className="masonry-grid" role="feed" aria-label="Quotes feed">
-            {loading ? (
-              Array.from({ length: 12 }).map((_, i) => (
-                <QuoteCardSkeleton key={i} index={i} />
-              ))
-            ) : displayedQuotes.length === 0 ? (
-              <div className="empty-state">
-                <span className="empty-state-icon">"</span>
-                <h3>No quotes found</h3>
-                <p style={{ fontSize: '0.875rem' }}>
-                  {searchQuery ? 'Try a different search term.' : 'Be the first to share a quote!'}
+              {/* Hero */}
+              <section className="hero">
+                <div className="hero-eyebrow">
+                  <Feather size={11} />
+                  For writers, readers &amp; thinkers
+                </div>
+                <h1 className="hero-title">
+                  A Haven for{' '}
+                  <span className="gradient-text">Words &amp; Wisdom</span>
+                </h1>
+                <p className="hero-sub">
+                  Discover quotes that move you, share words that define you,
+                  and build a collection of the phrases that shape your world.
                 </p>
+                <div className="hero-cta-row">
+                  {currentUser ? (
+                    <button className="btn-hero-primary" onClick={() => setShowModal(true)}>
+                      <PenLine size={16} />
+                      Share a Quote
+                    </button>
+                  ) : (
+                    <>
+                      <button className="btn-hero-primary" onClick={() => setShowAuthModal('signup')}>
+                        <Feather size={16} />
+                        Start Your Collection
+                      </button>
+                      <button className="btn-hero-secondary" onClick={() => setShowAuthModal('login')}>
+                        Already a member?
+                      </button>
+                    </>
+                  )}
+                </div>
+                <div className="hero-stats">
+                  <div className="stat-item">
+                    <span className="stat-number">
+                      {loading ? '…' : quotes.length.toLocaleString()}+
+                    </span>
+                    <span className="stat-label">Quotes</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">∞</span>
+                    <span className="stat-label">Inspiration</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-number">
+                      <BookOpen size={20} />
+                    </span>
+                    <span className="stat-label">Curated Daily</span>
+                  </div>
+                </div>
+              </section>
+
+              {/* Error Banner */}
+              {error && (
+                <div className="error-banner" role="alert">
+                  <AlertCircle size={16} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  {error}
+                </div>
+              )}
+
+              {/* Section Header + Filters */}
+              <div className="section-header">
+                <h2 className="section-title">
+                  {searchQuery
+                    ? `Results for "${searchQuery}"`
+                    : activeFilter === 'all' ? 'All Quotes'
+                      : activeFilter === 'recent' ? 'Recently Added'
+                        : 'Trending Now'}
+                </h2>
+                {!searchQuery && (
+                  <div className="filter-tabs" role="tablist">
+                    {(['all', 'recent', 'trending'] as const).map(f => (
+                      <button
+                        key={f}
+                        role="tab"
+                        aria-selected={activeFilter === f}
+                        className={`filter-tab${activeFilter === f ? ' active' : ''}`}
+                        onClick={() => setActiveFilter(f)}
+                      >
+                        {f.charAt(0).toUpperCase() + f.slice(1)}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              displayedQuotes.map((quote, index) => (
-                <QuoteCard
-                  key={quote.id}
-                  quote={quote}
-                  index={index}
-                  currentUserId={currentUser?.id ?? null}
-                  onAuthRequired={() => setShowAuthModal('login')}
-                  onDeleted={handleQuoteDeleted}
-                  onToast={showToast}
-                />
-              ))
-            )}
-          </div>
-        </div>
-      </main>
+
+              {/* Masonry Grid */}
+              <div className="masonry-grid" role="feed" aria-label="Quotes feed">
+                {loading ? (
+                  Array.from({ length: 12 }).map((_, i) => (
+                    <QuoteCardSkeleton key={i} index={i} />
+                  ))
+                ) : displayedQuotes.length === 0 ? (
+                  <div className="empty-state">
+                    <span className="empty-state-icon">"</span>
+                    <h3>No quotes found</h3>
+                    <p style={{ fontSize: '0.875rem' }}>
+                      {searchQuery ? 'Try a different search term.' : 'Be the first to share a quote!'}
+                    </p>
+                  </div>
+                ) : (
+                  displayedQuotes.map((quote, index) => (
+                    <QuoteCard
+                      key={quote.id}
+                      quote={quote}
+                      index={index}
+                      currentUserId={currentUser?.id ?? null}
+                      onAuthRequired={() => setShowAuthModal('login')}
+                      onDeleted={handleQuoteDeleted}
+                      onToast={showToast}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+          </main>
+        } />
+        <Route path="/quotes/:id" element={
+          <QuoteDetail
+            isModal={false}
+            currentUserId={currentUser?.id}
+            onAuthRequired={() => setShowAuthModal('login')}
+            onToast={showToast}
+          />
+        } />
+      </Routes>
+
+      {backgroundLocation && (
+        <Routes>
+          <Route path="/quotes/:id" element={
+            <QuoteDetail
+              isModal={true}
+              currentUserId={currentUser?.id}
+              onAuthRequired={() => setShowAuthModal('login')}
+              onToast={showToast}
+            />
+          } />
+        </Routes>
+      )}
 
       {/* ───── Footer ───── */}
       <footer className="site-footer">

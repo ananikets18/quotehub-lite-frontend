@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Heart, Bookmark, Share2, MoreHorizontal, Copy, Flag, UserCircle2, Trash2, Check, X } from 'lucide-react';
 import { toggleLike, toggleSave, deleteQuote } from '../api';
 
@@ -45,6 +46,8 @@ export const QuoteCard = ({
   onToast,
 }: QuoteCardProps) => {
   const style = { animationDelay: `${Math.min(index * STAGGER, 1.2)}s` };
+  const navigate = useNavigate();
+  const location = useLocation();
 
   // ── Like state (optimistic) ──────────────────────────────────────────
   const [liked, setLiked] = useState<boolean>(
@@ -215,8 +218,20 @@ export const QuoteCard = ({
     }
   };
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest('.card-actions') || target.closest('.card-menu-wrapper') || target.closest('button')) {
+      return;
+    }
+    if (window.innerWidth < 768) {
+      navigate(`/quotes/${quote.id}`);
+    } else {
+      navigate(`/quotes/${quote.id}`, { state: { backgroundLocation: location } });
+    }
+  };
+
   return (
-    <div className="quote-card" id={`quote-${quote.id}`} style={style}>
+    <div className="quote-card" id={`quote-${quote.id}`} style={style} onClick={handleCardClick}>
       {/* Decorative large quote mark */}
       <div className="quote-mark" aria-hidden="true">"</div>
 
