@@ -182,14 +182,24 @@ export const fetchAnalytics = async () => {
   return response.data;
 };
 
-export const fetchUserProfile = async (id: number) => {
-  const response = await api.get(`/users/${id}`);
-  return response.data;
+export const fetchUserProfile = async (username: string) => {
+  const res = await api.get(`/users/${username}`);
+  return res.data;
 };
 
-export const fetchUserQuotes = async (id: number, page = 1) => {
-  const response = await api.get(`/users/${id}/quotes?page=${page}`);
-  return response.data;
+export const fetchUserQuotes = async (username: string, page = 1, limit = 20) => {
+  const res = await api.get(`/users/${username}/quotes`, { params: { page, limit } });
+  return res.data;
+};
+
+export const updateProfile = async (data: { name: string; bio?: string }) => {
+  const res = await api.put('/account/profile', data);
+  return res.data;
+};
+
+export const deleteAccount = async () => {
+  const res = await api.delete('/account/profile');
+  return res.data;
 };
 
 export const requestPasswordReset = async (email: string) => {

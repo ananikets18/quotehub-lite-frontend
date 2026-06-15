@@ -21,6 +21,7 @@ export interface Quote {
   user?: {
     id: number;
     name: string;
+    username?: string;
     avatar?: string;
     initials?: string;
   };
@@ -263,7 +264,7 @@ export const QuoteCard = ({
       {/* Author attribution */}
       <div className="quote-author-row">
         <Link 
-          to={quote.userId ? `/users/${quote.userId}` : '#'} 
+          to={quote.user?.username ? `/${quote.user.username}` : '#'} 
           className="quote-author-avatar"
           onClick={(e) => e.stopPropagation()}
         >
@@ -274,7 +275,7 @@ export const QuoteCard = ({
         </Link>
         <div className="quote-author-info">
           <Link 
-            to={quote.userId ? `/users/${quote.userId}` : '#'} 
+            to={quote.user?.username ? `/${quote.user.username}` : '#'} 
             className="quote-author-name"
             onClick={(e) => e.stopPropagation()}
           >

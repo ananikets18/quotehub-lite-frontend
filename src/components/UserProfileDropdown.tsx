@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import './UserProfileDropdown.css';
 
 interface UserProfileDropdownProps {
-  user: { name: string; email?: string; role?: string };
+  user: { name: string; email?: string; role?: string; username?: string };
   onLogout: () => void;
 }
 
@@ -41,6 +41,10 @@ export function UserProfileDropdown({ user, onLogout }: UserProfileDropdownProps
             {user.email && <span>{user.email}</span>}
           </div>
           <div className="profile-dropdown-list">
+            <button className="dropdown-item" onClick={() => { setOpen(false); if (user.username) navigate(`/${user.username}`); }}>
+              <User size={16} />
+              My Profile
+            </button>
             <button className="dropdown-item" onClick={() => { setOpen(false); navigate('/analytics'); }}>
               <BarChart2 size={16} />
               Analytics Dashboard

@@ -19,7 +19,7 @@ interface UserProfileProps {
 }
 
 export function UserProfile({ currentUserId }: UserProfileProps = {}) {
-  const { id } = useParams<{ id: string }>();
+  const { username } = useParams<{ username: string }>();
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,13 +27,13 @@ export function UserProfile({ currentUserId }: UserProfileProps = {}) {
   const [hasMore, setHasMore] = useState(true);
 
   useEffect(() => {
-    if (!id) return;
+    if (!username) return;
     setLoading(true);
     setPage(1);
     
     Promise.all([
-      fetchUserProfile(Number(id)),
-      fetchUserQuotes(Number(id), 1)
+      fetchUserProfile(username),
+      fetchUserQuotes(username, 1)
     ])
       .then(([profileRes, quotesRes]) => {
         setProfile(profileRes);
@@ -42,13 +42,13 @@ export function UserProfile({ currentUserId }: UserProfileProps = {}) {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [username]);
 
   const loadMore = async () => {
-    if (!id || !hasMore) return;
+    if (!username || !hasMore) return;
     try {
       const nextPage = page + 1;
-      const res = await fetchUserQuotes(Number(id), nextPage);
+      const res = await fetchUserQuotes(username, nextPage);
       setQuotes(prev => [...prev, ...res.data]);
       setPage(nextPage);
       setHasMore(res.meta.currentPage < res.meta.lastPage);
@@ -79,6 +79,11 @@ export function UserProfile({ currentUserId }: UserProfileProps = {}) {
             <div className="stat">
               <strong>{profile.totalQuotes}</strong> Quotes
             </div>
+            {currentUserId === profile.id && (
+              <div style={{ marginLeft: 'auto' }}>
+                <a href="/settings" className="btn-secondary" style={{ textDecoration: 'none' }}>Edit Profile</a>
+              </div>
+            )}
           </div>
         </div>
       </div>
