@@ -74,7 +74,7 @@ function App() {
     }
   });
   const [showAuthModal, setShowAuthModal] = useState<'login' | 'signup' | 'forgot-password' | null>(null);
-  const [authForm, setAuthForm] = useState({ fullName: '', email: '', password: '', passwordConfirmation: '' });
+  const [authForm, setAuthForm] = useState({ fullName: '', username: '', email: '', password: '', passwordConfirmation: '' });
   const [authError, setAuthError] = useState('');
   const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
@@ -289,7 +289,7 @@ function App() {
         const res = await requestPasswordReset(authForm.email);
         setAuthSuccess(res.message || 'Password reset link sent.');
       }
-      setAuthForm({ fullName: '', email: '', password: '', passwordConfirmation: '' });
+      setAuthForm({ fullName: '', username: '', email: '', password: '', passwordConfirmation: '' });
     } catch (err: unknown) {
       setAuthError(getErrorMessage(err, 'Authentication failed'));
     } finally {
@@ -821,6 +821,24 @@ function App() {
                       placeholder="Your full name"
                       autoComplete="name"
                       autoFocus
+                    />
+                  </div>
+                )}
+
+                {showAuthModal === 'signup' && (
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="auth-username">Username *</label>
+                    <input
+                      id="auth-username"
+                      required
+                      type="text"
+                      className="form-input"
+                      value={authForm.username}
+                      onChange={e => setAuthForm({ ...authForm, username: e.target.value })}
+                      placeholder="e.g. quote_lover"
+                      pattern="[a-zA-Z0-9]+"
+                      title="Only alphanumeric characters are allowed"
+                      autoComplete="username"
                     />
                   </div>
                 )}
