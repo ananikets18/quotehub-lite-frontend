@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchUserProfile, updateProfile, deleteAccount } from '../api';
-import { User, Shield, AlertTriangle } from 'lucide-react';
+import { updateProfile, deleteAccount } from '../api';
+import { User, AlertTriangle } from 'lucide-react';
 import './SettingsPage.css';
 
 export function SettingsPage() {

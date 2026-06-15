@@ -11,14 +11,16 @@ import { AnalyticsDashboard } from './components/AnalyticsDashboard';
 import { UserProfile } from './components/UserProfile';
 import { ResetPassword } from './components/ResetPassword';
 import { AdminDashboard } from './components/AdminDashboard';
+import { SettingsPage } from './components/SettingsPage';
 import { AboutPage, ContactPage, PrivacyPolicyPage, TermsPage, DisclaimerPage, CookiePolicyPage, FAQPage } from './components/StaticPages';
 import { Footer } from './components/Footer';
-import { PenLine, Search, LogOut, AlertCircle, Feather, BookOpen, Shield } from 'lucide-react';
+import { PenLine, Search, AlertCircle, Feather, BookOpen } from 'lucide-react';
 import './index.css';
 
 type CurrentUser = {
   id: number;
   name: string;
+  username?: string;
   email?: string;
   isOnboarded?: boolean;
 };
@@ -318,10 +320,6 @@ function App() {
     }
   };
 
-  const userInitials = currentUser?.name
-    ? currentUser.name.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase()
-    : '?';
-
   return (
     <>
       {/* ───── Navbar ───── */}
@@ -588,10 +586,17 @@ function App() {
             </div>
           </main>
         } />
-        <Route path="/reset-password" element={
+        <Route path="/analytics" element={
           <main>
             <div className="container">
-              <ResetPassword />
+              <AnalyticsDashboard currentUserId={currentUser?.id ?? null} />
+            </div>
+          </main>
+        } />
+        <Route path="/settings" element={
+          <main>
+            <div className="container">
+              <SettingsPage />
             </div>
           </main>
         } />
@@ -600,11 +605,25 @@ function App() {
         <Route path="/faq" element={<FAQPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route path="/cookies" element={<CookiePolicyPage />} />
+        <Route path="/reset-password" element={
+          <main>
+            <div className="container">
+              <ResetPassword />
+            </div>
+          </main>
+        } />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/disclaimer" element={<DisclaimerPage />} />
         <Route path="/admin" element={
           <main>
             <AdminDashboard currentUser={currentUser as any} />
+          </main>
+        } />
+        <Route path="/:username" element={
+          <main>
+            <div className="container">
+              <UserProfile currentUserId={currentUser?.id ?? null} />
+            </div>
           </main>
         } />
       </Routes>
