@@ -41,7 +41,7 @@ export function UserProfileDropdown({ user, onLogout }: UserProfileDropdownProps
             {user.email && <span>{user.email}</span>}
           </div>
           <div className="profile-dropdown-list">
-            <button className="dropdown-item" onClick={() => { setOpen(false); if (user.username) navigate(`/${user.username}`); }}>
+            <button className="dropdown-item" onClick={() => { setOpen(false); navigate('/settings'); }}>
               <User size={16} />
               My Profile
             </button>

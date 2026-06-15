@@ -192,6 +192,11 @@ export const fetchUserQuotes = async (username: string, page = 1, limit = 20) =>
   return res.data;
 };
 
+export const fetchAccountProfile = async () => {
+  const res = await api.get('/account/profile');
+  return res.data;
+};
+
 export const updateProfile = async (data: { name: string; bio?: string }) => {
   const res = await api.put('/account/profile', data);
   return res.data;

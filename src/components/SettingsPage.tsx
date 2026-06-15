@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { updateProfile, deleteAccount } from '../api';
+import { updateProfile, deleteAccount, fetchAccountProfile } from '../api';
 import { User, AlertTriangle } from 'lucide-react';
 import './SettingsPage.css';
 
@@ -18,9 +18,6 @@ export function SettingsPage() {
   });
 
   useEffect(() => {
-    // Assuming the API has an endpoint to get the current logged-in user profile
-    // But since fetchUserProfile takes a username, and we don't have it easily without passing it...
-    // Let's just fetch from /account/profile
     const loadProfile = async () => {
       try {
         const token = localStorage.getItem('token');
@@ -29,13 +26,7 @@ export function SettingsPage() {
           return;
         }
         
-        // We can fetch the profile using the generic endpoint we just created
-        const res = await fetch('http://localhost:3333/api/v1/account/profile', {
-          headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!res.ok) throw new Error('Failed to load profile');
-        const data = await res.json();
+        const data = await fetchAccountProfile();
         
         setFormData({
           name: data.name || '',
