@@ -132,12 +132,12 @@ export const fetchLikedQuotes = async (page = 1) => {
 
 export const login = async (data: LoginPayload): Promise<AuthResponse> => {
   const response = await api.post('/auth/login', data);
-  return response.data.data;
+  return response.data;
 };
 
 export const signup = async (data: SignupPayload): Promise<AuthResponse> => {
   const response = await api.post('/auth/signup', data);
-  return response.data.data;
+  return response.data;
 };
 
 export const logout = async () => {
