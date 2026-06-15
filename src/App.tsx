@@ -1,16 +1,26 @@
 import { useEffect, useState, useRef } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { fetchQuotes, submitQuote, login, signup, logout } from './api';
+import { fetchQuotes, submitQuote, updateQuote, fetchCategories, fetchTags, fetchSavedQuotes, fetchLikedQuotes, login, signup, logout } from './api';
 import { QuoteCard, QuoteCardSkeleton } from './components/QuoteCard';
 import type { Quote as QuoteType } from './components/QuoteCard';
 import { QuoteDetail } from './components/QuoteDetail';
-import { PenLine, Search, LogOut, AlertCircle, Feather, BookOpen } from 'lucide-react';
+import { NotificationsDropdown } from './components/NotificationsDropdown';
+import { Onboarding } from './components/Onboarding';
+import { UserProfileDropdown } from './components/UserProfileDropdown';
+import { AnalyticsDashboard } from './components/AnalyticsDashboard';
+import { UserProfile } from './components/UserProfile';
+import { ResetPassword } from './components/ResetPassword';
+import { AdminDashboard } from './components/AdminDashboard';
+import { AboutPage, ContactPage, PrivacyPolicyPage, TermsPage, DisclaimerPage, CookiePolicyPage, FAQPage } from './components/StaticPages';
+import { Footer } from './components/Footer';
+import { PenLine, Search, LogOut, AlertCircle, Feather, BookOpen, Shield } from 'lucide-react';
 import './index.css';
 
 type CurrentUser = {
   id: number;
   name: string;
   email?: string;
+  isOnboarded?: boolean;
 };
 
 const getErrorMessage = (err: unknown, fallback: string) => {
@@ -29,7 +39,11 @@ function App() {
   const [quotes, setQuotes] = useState<QuoteType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'recent' | 'trending'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'recent' | 'trending' | 'saved' | 'liked'>('all');
+  const [categories, setCategories] = useState<{id: number, name: string}[]>([]);
+  const [tags, setTags] = useState<{id: number, name: string}[]>([]);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
+  const [selectedTagFilter, setSelectedTagFilter] = useState('');
 
   // Navbar scroll shadow
   const [scrolled, setScrolled] = useState(false);
@@ -57,9 +71,10 @@ function App() {
       return null;
     }
   });
-  const [showAuthModal, setShowAuthModal] = useState<'login' | 'signup' | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState<'login' | 'signup' | 'forgot-password' | null>(null);
   const [authForm, setAuthForm] = useState({ fullName: '', email: '', password: '', passwordConfirmation: '' });
   const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
   // Global toast
@@ -71,33 +86,84 @@ function App() {
     toastTimer.current = setTimeout(() => setToast(null), 3500);
   };
 
-  // Quote submit modal
+  // Quote submit/edit modal
   const [showModal, setShowModal] = useState(false);
+  const [editingQuote, setEditingQuote] = useState<QuoteType | null>(null);
   const [newQuoteContent, setNewQuoteContent] = useState('');
   const [newQuoteAuthor, setNewQuoteAuthor] = useState('');
   const [newQuoteSource, setNewQuoteSource] = useState('');
+  const [newQuoteCategories, setNewQuoteCategories] = useState<number[]>([]);
+  const [newQuoteTags, setNewQuoteTags] = useState<number[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
-  // Search
+  // Search & Debounce
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState(searchQuery);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   // Pagination states
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // Load initial quotes
+  // Load filters on mount
+  useEffect(() => {
+    const loadFilters = async () => {
+      try {
+        const [cats, tgs] = await Promise.all([fetchCategories(), fetchTags()]);
+        setCategories(cats.data || cats);
+        setTags(tgs.data || tgs);
+      } catch (err) {
+        console.error('Failed to load filters', err);
+      }
+    };
+    loadFilters();
+  }, []);
+
+  // Load initial quotes (or when filters change)
   useEffect(() => {
     const loadQuotes = async () => {
       try {
         setLoading(true);
         setError(null);
-        const response = await fetchQuotes(1);
+        let response;
+        if (activeFilter === 'saved') {
+          response = await fetchSavedQuotes(1);
+        } else if (activeFilter === 'liked') {
+          response = await fetchLikedQuotes(1);
+        } else {
+          response = await fetchQuotes({
+            page: 1,
+            search: debouncedSearch || undefined,
+            category: selectedCategoryFilter ? Number(selectedCategoryFilter) : undefined,
+            tag: selectedTagFilter ? Number(selectedTagFilter) : undefined,
+          });
+        }
+        
         const data = Array.isArray(response)
           ? response
           : response.data || response.data?.data || [];
-        setQuotes(data);
-        if (data.length === 0) setHasMore(false);
+        
+        // Client-side sorting for recent/trending as a fallback if not handled by backend
+        let sorted = [...data];
+        if (activeFilter === 'recent') {
+          sorted.sort((a, b) => {
+            const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return bTime - aTime;
+          });
+        } else if (activeFilter === 'trending') {
+          const getLikes = (q: QuoteType) => Number(q.$extras?.likes_count ?? q.likes_count ?? 0);
+          sorted.sort((a, b) => getLikes(b) - getLikes(a));
+        }
+
+        setQuotes(sorted);
+        setPage(1);
+        setHasMore(data.length >= 10); // Assume page size is at least 10
       } catch (err) {
         console.error('Failed to fetch quotes:', err);
         setError('Failed to load quotes. Is the backend running?');
@@ -106,14 +172,27 @@ function App() {
       }
     };
     loadQuotes();
-  }, []);
+  }, [activeFilter, debouncedSearch, selectedCategoryFilter, selectedTagFilter]);
 
   const handleLoadMore = async () => {
     if (loadingMore || !hasMore) return;
     try {
       setLoadingMore(true);
       const nextPage = page + 1;
-      const response = await fetchQuotes(nextPage);
+      let response;
+      if (activeFilter === 'saved') {
+        response = await fetchSavedQuotes(nextPage);
+      } else if (activeFilter === 'liked') {
+        response = await fetchLikedQuotes(nextPage);
+      } else {
+        response = await fetchQuotes({
+          page: nextPage,
+          search: debouncedSearch || undefined,
+          category: selectedCategoryFilter ? Number(selectedCategoryFilter) : undefined,
+          tag: selectedTagFilter ? Number(selectedTagFilter) : undefined,
+        });
+      }
+      
       const data = Array.isArray(response)
         ? response
         : response.data || response.data?.data || [];
@@ -121,13 +200,11 @@ function App() {
       if (data.length === 0) {
         setHasMore(false);
       } else {
-        // Filter out duplicates just in case
         setQuotes(prev => {
           const newQuotes = data.filter((q: QuoteType) => !prev.some(p => p.id === q.id));
           return [...prev, ...newQuotes];
         });
         setPage(nextPage);
-        // If the returned data is very small, we might have hit the end
         if (data.length < 10) setHasMore(false);
       }
     } catch (err) {
@@ -138,34 +215,9 @@ function App() {
     }
   };
 
-  // Filtered + searched quotes
-  const filteredQuotes = quotes.filter(q => {
-    if (!searchQuery.trim()) return true;
-    const q_ = searchQuery.toLowerCase();
-    return (
-      q.content?.toLowerCase().includes(q_) ||
-      q.author?.toLowerCase().includes(q_) ||
-      q.source?.toLowerCase().includes(q_)
-    );
-  });
+  const displayedQuotes = quotes;
 
-  const displayedQuotes = (() => {
-    if (activeFilter === 'all') return filteredQuotes;
-    const sorted = [...filteredQuotes];
-    if (activeFilter === 'recent') {
-      sorted.sort((a, b) => {
-        const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bTime - aTime;
-      });
-      return sorted;
-    }
-    const getLikes = (q: QuoteType) => Number(q.$extras?.likes_count ?? q.likes_count ?? 0);
-    sorted.sort((a, b) => getLikes(b) - getLikes(a));
-    return sorted;
-  })();
-
-  // Submit quote
+  // Submit quote (Create or Edit)
   const handleSubmitQuote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
@@ -176,20 +228,34 @@ function App() {
     if (!newQuoteContent.trim()) return;
     try {
       setSubmitting(true);
-      const newQuote = await submitQuote({
+      const payload = {
         content: newQuoteContent,
         author: newQuoteAuthor || undefined,
         source: newQuoteSource || undefined,
-      });
-      setQuotes(prev => [newQuote, ...prev]);
+        categories: newQuoteCategories,
+        tags: newQuoteTags,
+      };
+
+      if (editingQuote) {
+        const updatedQuote = await updateQuote(editingQuote.id, payload);
+        setQuotes(prev => prev.map(q => q.id === editingQuote.id ? { ...q, ...updatedQuote } : q));
+        showToast('Your quote has been updated!');
+      } else {
+        const newQuote = await submitQuote(payload);
+        setQuotes(prev => [newQuote, ...prev]);
+        showToast('Your quote has been shared!');
+      }
+
       setShowModal(false);
+      setEditingQuote(null);
       setNewQuoteContent('');
       setNewQuoteAuthor('');
       setNewQuoteSource('');
-      showToast('Your quote has been shared!');
+      setNewQuoteCategories([]);
+      setNewQuoteTags([]);
     } catch (err: unknown) {
       console.error('Failed to submit quote:', err);
-      const msg = getErrorMessage(err, 'Failed to submit quote. Please try again.');
+      const msg = getErrorMessage(err, 'Failed to save quote. Please try again.');
       showToast(msg, 'error');
     } finally {
       setSubmitting(false);
@@ -209,16 +275,17 @@ function App() {
         setCurrentUser(data.user);
         setShowAuthModal(null);
         showToast(`Welcome back, ${data.user.name}!`);
-      } else {
-        if (authForm.password !== authForm.passwordConfirmation) {
-          throw new Error('Passwords do not match');
-        }
-        const data = await signup(authForm);
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setCurrentUser(data.user);
+      } else if (showAuthModal === 'signup') {
+        const res = await signup(authForm);
+        setCurrentUser(res.user);
+        localStorage.setItem('user', JSON.stringify(res.user));
+        localStorage.setItem('token', res.token);
         setShowAuthModal(null);
-        showToast(`Welcome to Quoteshub, ${data.user.name}!`);
+        showToast(`Welcome to Quoteshub, ${res.user.name.split(' ')[0]}!`);
+      } else if (showAuthModal === 'forgot-password') {
+        const { requestPasswordReset } = await import('./api');
+        const res = await requestPasswordReset(authForm.email);
+        setAuthSuccess(res.message || 'Password reset link sent.');
       }
       setAuthForm({ fullName: '', email: '', password: '', passwordConfirmation: '' });
     } catch (err: unknown) {
@@ -279,25 +346,23 @@ function App() {
           <div className="navbar-actions">
             {currentUser ? (
               <>
-                <div className="user-chip">
-                  <div className="user-chip-avatar">{userInitials}</div>
-                  {currentUser.name.split(' ')[0]}
-                </div>
+                <NotificationsDropdown />
+                <UserProfileDropdown user={currentUser} onLogout={handleLogout} />
                 <button
                   className="nav-btn-primary"
-                  onClick={() => setShowModal(true)}
+                  onClick={() => {
+                    setEditingQuote(null);
+                    setNewQuoteContent('');
+                    setNewQuoteAuthor('');
+                    setNewQuoteSource('');
+                    setNewQuoteCategories([]);
+                    setNewQuoteTags([]);
+                    setShowModal(true);
+                  }}
                   id="submit-quote-btn"
                 >
                   <PenLine size={14} />
                   Share
-                </button>
-                <button
-                  className="nav-btn-outline"
-                  onClick={handleLogout}
-                  title="Log out"
-                  aria-label="Log out"
-                >
-                  <LogOut size={14} />
                 </button>
               </>
             ) : (
@@ -336,7 +401,15 @@ function App() {
                 </p>
                 <div className="hero-cta-row">
                   {currentUser ? (
-                    <button className="btn-hero-primary" onClick={() => setShowModal(true)}>
+                    <button className="btn-hero-primary" onClick={() => {
+                      setEditingQuote(null);
+                      setNewQuoteContent('');
+                      setNewQuoteAuthor('');
+                      setNewQuoteSource('');
+                      setNewQuoteCategories([]);
+                      setNewQuoteTags([]);
+                      setShowModal(true);
+                    }}>
                       <PenLine size={16} />
                       Share a Quote
                     </button>
@@ -387,21 +460,52 @@ function App() {
                     ? `Results for "${searchQuery}"`
                     : activeFilter === 'all' ? 'All Quotes'
                       : activeFilter === 'recent' ? 'Recently Added'
-                        : 'Trending Now'}
+                        : activeFilter === 'saved' ? 'Saved Quotes'
+                          : activeFilter === 'liked' ? 'Liked Quotes'
+                            : 'Trending Now'}
                 </h2>
                 {!searchQuery && (
-                  <div className="filter-tabs" role="tablist">
-                    {(['all', 'recent', 'trending'] as const).map(f => (
-                      <button
-                        key={f}
-                        role="tab"
-                        aria-selected={activeFilter === f}
-                        className={`filter-tab${activeFilter === f ? ' active' : ''}`}
-                        onClick={() => setActiveFilter(f)}
-                      >
-                        {f.charAt(0).toUpperCase() + f.slice(1)}
-                      </button>
-                    ))}
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                    <div className="filter-tabs" role="tablist">
+                      {(['all', 'recent', 'trending', ...(currentUser ? ['saved', 'liked'] : [])] as const).map(f => (
+                        <button
+                          key={f}
+                          role="tab"
+                          aria-selected={activeFilter === f}
+                          className={`filter-tab${activeFilter === f ? ' active' : ''}`}
+                          onClick={() => setActiveFilter(f as 'all' | 'recent' | 'trending' | 'saved' | 'liked')}
+                        >
+                          {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </button>
+                      ))}
+                    </div>
+                    {/* Category and Tag Selects */}
+                    {activeFilter !== 'saved' && activeFilter !== 'liked' && (
+                      <div className="header-filters">
+                        <select
+                          className="header-select"
+                          value={selectedCategoryFilter}
+                          onChange={(e) => setSelectedCategoryFilter(e.target.value)}
+                          aria-label="Filter by category"
+                        >
+                          <option value="">All Categories</option>
+                          {categories.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                        <select
+                          className="header-select"
+                          value={selectedTagFilter}
+                          onChange={(e) => setSelectedTagFilter(e.target.value)}
+                          aria-label="Filter by tag"
+                        >
+                          <option value="">All Tags</option>
+                          {tags.map(t => (
+                            <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -429,6 +533,15 @@ function App() {
                       currentUserId={currentUser?.id ?? null}
                       onAuthRequired={() => setShowAuthModal('login')}
                       onDeleted={handleQuoteDeleted}
+                      onEdit={(quote) => {
+                        setEditingQuote(quote);
+                        setNewQuoteContent(quote.content);
+                        setNewQuoteAuthor(quote.author || '');
+                        setNewQuoteSource(quote.source || '');
+                        setNewQuoteCategories(quote.categories?.map(c => c.id) || []);
+                        setNewQuoteTags(quote.tags?.map(t => t.id) || []);
+                        setShowModal(true);
+                      }}
                       onToast={showToast}
                     />
                   ))
@@ -459,7 +572,44 @@ function App() {
             onToast={showToast}
           />
         } />
+        {currentUser && (
+          <Route path="/analytics" element={
+            <main>
+              <div className="container">
+                <AnalyticsDashboard currentUserId={currentUser?.id ?? null} />
+              </div>
+            </main>
+          } />
+        )}
+        <Route path="/users/:id" element={
+          <main>
+            <div className="container">
+              <UserProfile currentUserId={currentUser?.id ?? null} />
+            </div>
+          </main>
+        } />
+        <Route path="/reset-password" element={
+          <main>
+            <div className="container">
+              <ResetPassword />
+            </div>
+          </main>
+        } />
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+        <Route path="/faq" element={<FAQPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/cookies" element={<CookiePolicyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/disclaimer" element={<DisclaimerPage />} />
+        <Route path="/admin" element={
+          <main>
+            <AdminDashboard currentUser={currentUser as any} />
+          </main>
+        } />
       </Routes>
+
+      <Footer />
 
       {backgroundLocation && (
         <Routes>
@@ -491,13 +641,15 @@ function App() {
         </div>
       )}
 
-      {/* ───── Submit Quote Modal ───── */}
+      {/* ───── Submit/Edit Quote Modal ───── */}
       {showModal && (
-        <div className="modal-overlay" onClick={closeOnOverlayClick} role="dialog" aria-modal="true" aria-label="Submit a quote">
+        <div className="modal-overlay" onClick={closeOnOverlayClick} role="dialog" aria-modal="true" aria-label={editingQuote ? "Edit quote" : "Submit a quote"}>
           <div className="modal wide">
             <div className="modal-header">
-              <h2 className="modal-title">Share a Quote</h2>
-              <p className="modal-subtitle">Add words that moved you to the collection.</p>
+              <h2 className="modal-title">{editingQuote ? 'Edit Quote' : 'Share a Quote'}</h2>
+              <p className="modal-subtitle">
+                {editingQuote ? 'Update your quote details below.' : 'Add words that moved you to the collection.'}
+              </p>
             </div>
             <form onSubmit={handleSubmitQuote}>
               <div className="modal-body">
@@ -539,6 +691,44 @@ function App() {
                     maxLength={255}
                   />
                 </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="quote-categories">Categories (Select multiple)</label>
+                    <select
+                      id="quote-categories"
+                      multiple
+                      className="form-select"
+                      value={newQuoteCategories.map(String)}
+                      onChange={e => {
+                        const options = Array.from(e.target.selectedOptions, option => Number(option.value));
+                        setNewQuoteCategories(options);
+                      }}
+                      size={4}
+                    >
+                      {categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group" style={{ marginBottom: 0 }}>
+                    <label className="form-label" htmlFor="quote-tags">Tags (Select multiple)</label>
+                    <select
+                      id="quote-tags"
+                      multiple
+                      className="form-select"
+                      value={newQuoteTags.map(String)}
+                      onChange={e => {
+                        const options = Array.from(e.target.selectedOptions, option => Number(option.value));
+                        setNewQuoteTags(options);
+                      }}
+                      size={4}
+                    >
+                      {tags.map(t => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
               </div>
               <div className="modal-footer">
                 <button type="button" className="btn-cancel" onClick={() => setShowModal(false)}>
@@ -550,12 +740,21 @@ function App() {
                   disabled={submitting || !newQuoteContent.trim()}
                   id="confirm-submit-quote"
                 >
-                  {submitting ? 'Publishing…' : 'Publish Quote'}
+                  {submitting ? (editingQuote ? 'Updating…' : 'Publishing…') : (editingQuote ? 'Save Changes' : 'Publish Quote')}
                 </button>
               </div>
             </form>
           </div>
         </div>
+      )}
+
+      {/* ───── Onboarding Modal ───── */}
+      {currentUser && currentUser.isOnboarded === false && (
+        <Onboarding onComplete={() => {
+          const updatedUser = { ...currentUser, isOnboarded: true };
+          setCurrentUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+        }} />
       )}
 
       {/* ───── Auth Modal ───── */}
@@ -564,11 +763,15 @@ function App() {
           <div className="modal">
             <div className="modal-header">
               <h2 className="modal-title">
-                {showAuthModal === 'login' ? 'Welcome Back' : 'Join Quoteshub'}
+                {showAuthModal === 'login' ? 'Welcome Back' 
+                 : showAuthModal === 'forgot-password' ? 'Reset Password' 
+                 : 'Join Quoteshub'}
               </h2>
               <p className="modal-subtitle">
                 {showAuthModal === 'login'
                   ? 'Sign in to save, share and curate quotes.'
+                  : showAuthModal === 'forgot-password'
+                  ? 'Enter your email and we will send you a reset link.'
                   : 'Create your free account in seconds.'}
               </p>
             </div>
@@ -578,6 +781,11 @@ function App() {
                   <div className="form-alert error" role="alert">
                     <AlertCircle size={15} />
                     {authError}
+                  </div>
+                )}
+                {authSuccess && (
+                  <div className="form-alert success" role="alert" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
+                    {authSuccess}
                   </div>
                 )}
 
@@ -613,20 +821,22 @@ function App() {
                   />
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label" htmlFor="auth-password">Password *</label>
-                  <input
-                    id="auth-password"
-                    required
-                    type="password"
-                    className="form-input"
-                    value={authForm.password}
-                    onChange={e => setAuthForm({ ...authForm, password: e.target.value })}
-                    placeholder="Min. 8 characters"
-                    autoComplete={showAuthModal === 'login' ? 'current-password' : 'new-password'}
-                    minLength={8}
-                  />
-                </div>
+                {showAuthModal !== 'forgot-password' && (
+                  <div className="form-group">
+                    <label className="form-label" htmlFor="auth-password">Password *</label>
+                    <input
+                      id="auth-password"
+                      required
+                      type="password"
+                      className="form-input"
+                      value={authForm.password}
+                      onChange={e => setAuthForm({ ...authForm, password: e.target.value })}
+                      placeholder="Min. 8 characters"
+                      autoComplete={showAuthModal === 'login' ? 'current-password' : 'new-password'}
+                      minLength={8}
+                    />
+                  </div>
+                )}
 
                 {showAuthModal === 'signup' && (
                   <div className="form-group" style={{ marginBottom: 0 }}>
@@ -647,31 +857,37 @@ function App() {
 
               <div className="modal-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                  <button type="button" className="btn-cancel" onClick={() => { setShowAuthModal(null); setAuthError(''); }}>
+                  <button type="button" className="btn-cancel" onClick={() => { setShowAuthModal(null); setAuthError(''); setAuthSuccess(''); }}>
                     Cancel
                   </button>
                   <button
                     type="submit"
                     className="btn-submit"
                     disabled={authLoading}
-                    id={showAuthModal === 'login' ? 'btn-login' : 'btn-signup'}
+                    id={showAuthModal === 'login' ? 'btn-login' : showAuthModal === 'forgot-password' ? 'btn-reset' : 'btn-signup'}
                   >
                     {authLoading
                       ? 'Please wait…'
-                      : showAuthModal === 'login' ? 'Sign In' : 'Create Account'
+                      : showAuthModal === 'login' ? 'Sign In' : showAuthModal === 'forgot-password' ? 'Send Link' : 'Create Account'
                     }
                   </button>
                 </div>
                 <div className="auth-switch">
                   {showAuthModal === 'login' ? (
-                    <>Don't have an account?{' '}
-                      <button type="button" onClick={() => { setShowAuthModal('signup'); setAuthError(''); }}>
-                        Sign up free
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
+                      <div>
+                        Don't have an account?{' '}
+                        <button type="button" onClick={() => { setShowAuthModal('signup'); setAuthError(''); }}>
+                          Sign up free
+                        </button>
+                      </div>
+                      <button type="button" onClick={() => { setShowAuthModal('forgot-password'); setAuthError(''); }} style={{ fontSize: '0.875rem' }}>
+                        Forgot your password?
                       </button>
-                    </>
+                    </div>
                   ) : (
                     <>Already a member?{' '}
-                      <button type="button" onClick={() => { setShowAuthModal('login'); setAuthError(''); }}>
+                      <button type="button" onClick={() => { setShowAuthModal('login'); setAuthError(''); setAuthSuccess(''); }}>
                         Sign in
                       </button>
                     </>

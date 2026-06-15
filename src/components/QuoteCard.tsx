@@ -1,7 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Heart, Bookmark, Share2, MoreHorizontal, Copy, Flag, UserCircle2, Trash2, Check, X } from 'lucide-react';
-import { toggleLike, toggleSave, deleteQuote } from '../api';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { Heart, Bookmark, Share2, MoreHorizontal, Copy, Flag, UserCircle2, Trash2, Check, X, Shield, Link as LinkIcon } from 'lucide-react';
+import { toggleLike, toggleSave, deleteQuote, adminDeleteQuote } from '../api';
+
+const XIcon = ({ size = 14 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">
+    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+  </svg>
+);
 
 export interface Quote {
   id: number;
@@ -24,14 +30,18 @@ export interface Quote {
     is_liked?: boolean;
     is_saved?: boolean;
   };
+  categories?: { id: number; name: string }[];
+  tags?: { id: number; name: string }[];
 }
 
 interface QuoteCardProps {
   quote: Quote;
   index: number;
   currentUserId?: number | null;
+  currentUserRole?: string;
   onAuthRequired?: () => void;
   onDeleted?: (id: number) => void;
+  onEdit?: (quote: Quote) => void;
   onToast?: (msg: string, type?: 'success' | 'info' | 'error') => void;
 }
 
@@ -41,8 +51,10 @@ export const QuoteCard = ({
   quote,
   index,
   currentUserId,
+  currentUserRole,
   onAuthRequired,
   onDeleted,
+  onEdit,
   onToast,
 }: QuoteCardProps) => {
   const style = { animationDelay: `${Math.min(index * STAGGER, 1.2)}s` };
@@ -75,6 +87,10 @@ export const QuoteCard = ({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // ── Share dropdown ────────────────────────────────────────────────────
+  const [shareMenuOpen, setShareMenuOpen] = useState(false);
+  const shareMenuRef = useRef<HTMLDivElement>(null);
+
   // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
@@ -82,6 +98,9 @@ export const QuoteCard = ({
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
         setConfirmDelete(false);
+      }
+      if (shareMenuRef.current && !shareMenuRef.current.contains(e.target as Node)) {
+        setShareMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClick);
@@ -94,7 +113,9 @@ export const QuoteCard = ({
   const avatar = quote.user?.avatar;
   const initials = (quote.user?.initials ?? authorName.slice(0, 2)).toUpperCase();
   const isLong = quote.content.length > 200;
-  const isOwner = currentUserId != null && quote.userId != null && currentUserId === quote.userId;
+  const quoteOwnerId = quote.userId ?? (quote as any).user_id;
+  const isOwner = currentUserId != null && quoteOwnerId != null && currentUserId === quoteOwnerId;
+  const isAdmin = currentUserRole === 'admin';
 
   // ── Handlers ──────────────────────────────────────────────────────────
 
@@ -150,25 +171,17 @@ export const QuoteCard = ({
     }
   };
 
-  const handleShare = async () => {
+  const handleShareToX = () => {
+    setShareMenuOpen(false);
     const shareText = `"${quote.content}"${authorName !== 'Unknown' ? ` — ${authorName}` : ''}`;
-    const shareUrl = `${window.location.origin}${window.location.pathname}#quote-${quote.id}`;
+    const shareUrl = `${window.location.origin}/quotes/${quote.id}`;
+    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
+  };
 
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: 'Quoteshub', text: shareText, url: shareUrl });
-      } catch (err: unknown) {
-        const abortName = err && typeof err === 'object' && 'name' in err
-          ? String((err as { name?: string }).name)
-          : undefined;
-        if (abortName !== 'AbortError') {
-          // Fallback to clipboard if share fails
-          await copyToClipboard(`${shareText}\n\n${shareUrl}`, 'Copied to clipboard!');
-        }
-      }
-    } else {
-      await copyToClipboard(`${shareText}\n\n${shareUrl}`, 'Copied to clipboard!');
-    }
+  const handleCopyLink = () => {
+    setShareMenuOpen(false);
+    const shareUrl = `${window.location.origin}/quotes/${quote.id}`;
+    copyToClipboard(shareUrl, 'Link copied to clipboard!');
   };
 
   const copyToClipboard = async (text: string, successMsg: string) => {
@@ -199,14 +212,21 @@ export const QuoteCard = ({
     onToast?.(parts.length ? parts.join(' · ') : 'No author info available.', 'info');
   };
 
-  const handleDelete = async () => {
-    if (!confirmDelete) {
+  const handleDelete = async (isAsAdmin = false) => {
+    if (isAsAdmin) {
+      const confirm = window.confirm('Are you sure you want to permanently delete this quote as an Admin?');
+      if (!confirm) return;
+    } else if (!confirmDelete) {
       setConfirmDelete(true);
       return;
     }
     setDeleting(true);
     try {
-      await deleteQuote(quote.id);
+      if (isAsAdmin) {
+        await adminDeleteQuote(quote.id);
+      } else {
+        await deleteQuote(quote.id);
+      }
       setMenuOpen(false);
       onDeleted?.(quote.id);
       onToast?.('Quote deleted.', 'success');
@@ -242,14 +262,24 @@ export const QuoteCard = ({
 
       {/* Author attribution */}
       <div className="quote-author-row">
-        <div className="quote-author-avatar">
+        <Link 
+          to={quote.userId ? `/users/${quote.userId}` : '#'} 
+          className="quote-author-avatar"
+          onClick={(e) => e.stopPropagation()}
+        >
           {avatar
             ? <img src={avatar} alt={authorName} />
             : initials
           }
-        </div>
+        </Link>
         <div className="quote-author-info">
-          <span className="quote-author-name">{authorName}</span>
+          <Link 
+            to={quote.userId ? `/users/${quote.userId}` : '#'} 
+            className="quote-author-name"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {authorName}
+          </Link>
           {quote.source && (
             <span className="quote-author-source">{quote.source}</span>
           )}
@@ -258,6 +288,18 @@ export const QuoteCard = ({
           )}
         </div>
       </div>
+
+      {/* Categories & Tags */}
+      {(quote.categories?.length || quote.tags?.length) ? (
+        <div className="quote-badges">
+          {quote.categories?.map(c => (
+            <span key={c.id} className="badge badge-category">{c.name}</span>
+          ))}
+          {quote.tags?.map(t => (
+            <span key={t.id} className="badge badge-tag">#{t.name}</span>
+          ))}
+        </div>
+      ) : null}
 
       {/* Footer: interactions */}
       <div className="card-footer">
@@ -289,14 +331,28 @@ export const QuoteCard = ({
           </button>
 
           {/* Share */}
-          <button
-            className="card-action-btn"
-            onClick={handleShare}
-            title="Share"
-            aria-label="Share quote"
-          >
-            <Share2 />
-          </button>
+          <div className="card-menu-wrapper" ref={shareMenuRef}>
+            <button
+              className={`card-action-btn${shareMenuOpen ? ' active' : ''}`}
+              onClick={(e) => { e.stopPropagation(); setShareMenuOpen(!shareMenuOpen); }}
+              title="Share"
+              aria-label="Share quote"
+            >
+              <Share2 />
+            </button>
+            {shareMenuOpen && (
+              <div className="card-dropdown" role="menu" style={{ bottom: '100%', top: 'auto', marginBottom: '0.5rem' }}>
+                <button className="dropdown-item" role="menuitem" onClick={(e) => { e.stopPropagation(); handleCopyLink(); }}>
+                  <LinkIcon size={14} />
+                  Copy Link
+                </button>
+                <button className="dropdown-item" role="menuitem" onClick={(e) => { e.stopPropagation(); handleShareToX(); }}>
+                  <XIcon size={14} />
+                  Share to X
+                </button>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* 3-dot menu */}
@@ -332,17 +388,21 @@ export const QuoteCard = ({
                 Report
               </button>
 
-              {/* Delete (owner only) */}
+              {/* Delete & Edit (owner only) */}
               {isOwner && (
                 <>
                   <div className="dropdown-divider" />
+                  <button className="dropdown-item" role="menuitem" onClick={() => { setMenuOpen(false); onEdit?.(quote); }}>
+                    <MoreHorizontal size={14} style={{ opacity: 0 }} /> {/* spacer placeholder for icon alignment, or we can use PenLine from lucide but it's not imported here yet. Let's just use text or add PenLine later if needed. Actually we don't need the icon since it's just Edit. But I'll use MoreHorizontal with 0 opacity as a spacer just in case */}
+                    Edit Quote
+                  </button>
                   {confirmDelete ? (
                     <div className="dropdown-confirm">
                       <span>Delete this quote?</span>
                       <div className="dropdown-confirm-actions">
                         <button
                           className="dropdown-confirm-btn confirm"
-                          onClick={handleDelete}
+                          onClick={() => handleDelete(false)}
                           disabled={deleting}
                           aria-label="Confirm delete"
                         >
@@ -360,11 +420,22 @@ export const QuoteCard = ({
                       </div>
                     </div>
                   ) : (
-                    <button className="dropdown-item danger" role="menuitem" onClick={handleDelete}>
+                    <button className="dropdown-item danger" role="menuitem" onClick={() => handleDelete(false)}>
                       <Trash2 size={14} />
                       Delete Quote
                     </button>
                   )}
+                </>
+              )}
+
+              {/* Admin Delete */}
+              {isAdmin && !isOwner && (
+                <>
+                  <div className="dropdown-divider" />
+                  <button className="dropdown-item danger" role="menuitem" onClick={() => handleDelete(true)}>
+                    <Shield size={14} />
+                    Delete (Admin)
+                  </button>
                 </>
               )}
             </div>
