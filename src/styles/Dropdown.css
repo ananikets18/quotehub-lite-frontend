@@ -1,0 +1,102 @@
+/* ══════════════════════════════════════════
+   DROPDOWN
+══════════════════════════════════════════ */
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0.625rem 1rem;
+  text-align: left;
+  transition: all var(--ease-fast);
+}
+
+.dropdown-item svg {
+  flex-shrink: 0;
+}
+
+.dropdown-item:hover {
+  background: rgba(240, 234, 214, 0.05);
+  color: var(--text-primary);
+}
+
+.dropdown-item.danger {
+  color: #f87171;
+}
+
+.dropdown-item.danger:hover {
+  background: rgba(248, 113, 113, 0.08);
+  color: #fca5a5;
+}
+
+.dropdown-divider {
+  height: 1px;
+  background: var(--border-subtle);
+  margin: 0.25rem 0;
+}
+
+/* Inline delete confirmation */
+.dropdown-confirm {
+  padding: 0.75rem 1rem;
+}
+
+.dropdown-confirm>span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-bottom: 0.625rem;
+  font-style: italic;
+}
+
+.dropdown-confirm-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.dropdown-confirm-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid;
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--ease-fast);
+}
+
+.dropdown-confirm-btn.confirm {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.3);
+  color: #f87171;
+}
+
+.dropdown-confirm-btn.confirm:hover {
+  background: rgba(248, 113, 113, 0.2);
+}
+
+.dropdown-confirm-btn.confirm:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.dropdown-confirm-btn.cancel {
+  background: rgba(240, 234, 214, 0.05);
+  border-color: var(--border-card);
+  color: var(--text-muted);
+}
+
+.dropdown-confirm-btn.cancel:hover {
+  color: var(--text-secondary);
+}

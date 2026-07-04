@@ -1,0 +1,170 @@
+/* ══════════════════════════════════════════
+   QUOTE DETAIL (Standalone & Modal)
+══════════════════════════════════════════ */
+.quote-modal-overlay {
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(12px);
+}
+
+.quote-modal {
+  max-width: 640px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-gold);
+  position: relative;
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-modal);
+  animation: modalIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.modal-close-btn {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--ease-fast);
+  z-index: 10;
+}
+
+.modal-close-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.standalone-quote-page {
+  padding-top: 4rem;
+  padding-bottom: 4rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  cursor: pointer;
+  margin-bottom: 2rem;
+  transition: color var(--ease-fast);
+}
+
+.back-btn:hover {
+  color: var(--gold);
+}
+
+.quote-detail-content {
+  padding: 3rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.quote-detail-body {
+  position: relative;
+  text-align: center;
+}
+
+.quote-mark.large {
+  position: relative;
+  font-size: 6rem;
+  line-height: 1;
+  top: auto;
+  right: auto;
+  margin-bottom: -1rem;
+  display: block;
+  text-align: center;
+  opacity: 0.15;
+}
+
+.quote-detail-body h2 {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.5rem, 4vw, 2.25rem);
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.quote-detail-meta {
+  text-align: center;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 2rem;
+}
+
+.quote-detail-meta .author-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.5rem;
+  color: var(--gold);
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.quote-detail-meta .author-source {
+  font-family: 'Inter', sans-serif;
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.quote-detail-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+}
+
+.detail-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.9375rem;
+  cursor: pointer;
+  padding: 0.625rem 1rem;
+  border-radius: 100px;
+  transition: all var(--ease-fast);
+}
+
+.detail-action-btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--border-card);
+  color: var(--text-primary);
+}
+
+.detail-action-btn.liked {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.3);
+}
+
+.detail-action-btn.saved {
+  color: var(--gold);
+  border-color: rgba(212, 168, 83, 0.3);
+}
+
+.quote-detail-loading,
+.quote-detail-error {
+  text-align: center;
+  padding: 4rem 0;
+  color: var(--text-muted);
+}
+
+.quote-detail-error {
+  color: #f87171;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}

@@ -1,0 +1,53 @@
+/* ══════════════════════════════════════════
+   APP SPECIFIC STYLES
+══════════════════════════════════════════ */
+.loading-fallback {
+  display: flex;
+  justify-content: center;
+  padding: 4rem;
+  color: var(--text-muted);
+}
+
+.alert-icon {
+  display: inline;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+.filters-row {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.empty-state-text {
+  font-size: 0.875rem;
+}
+
+.load-more-container {
+  display: flex;
+  justify-content: center;
+  margin-top: 3rem;
+}
+
+.btn-load-more {
+  padding: 0.75rem 2rem;
+}
+
+.form-group-mb0 {
+  margin-bottom: 0 !important;
+}
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+@media (max-width: 480px) {
+  .form-row {
+    grid-template-columns: 1fr;
+  }
+}

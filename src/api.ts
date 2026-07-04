@@ -24,11 +24,10 @@ type SignupPayload = {
   passwordConfirmation: string;
 };
 
-const API_URL = import.meta.env.VITE_API_URL
-  ?? (import.meta.env.DEV ? 'http://localhost:3333/api/v1' : '');
+const API_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:3333/api/v1' : '');
 
 if (!API_URL) {
-  throw new Error('VITE_API_URL is required in production.');
+  console.warn('VITE_API_URL is missing! Requests will fail in production unless served from the backend domain.');
 }
 
 export const api = axios.create({
@@ -36,16 +35,49 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  withCredentials: true,
 });
 
-// Add interceptor to append the token to every request
+// Cold Start Detection
+let coldStartTimer: ReturnType<typeof setTimeout> | null = null;
+let isColdStarting = false;
+
+// Request interceptor: start timer
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // If we're not already showing the warning, start a timer
+  if (!isColdStarting) {
+    coldStartTimer = setTimeout(() => {
+      isColdStarting = true;
+      window.dispatchEvent(new CustomEvent('cold-start-warning'));
+    }, 4000); // Trigger after 4 seconds of waiting
   }
   return config;
 });
+
+// Response interceptor: clear timer and resolve
+api.interceptors.response.use(
+  (response) => {
+    if (coldStartTimer) clearTimeout(coldStartTimer);
+    if (isColdStarting) {
+      isColdStarting = false;
+      window.dispatchEvent(new CustomEvent('cold-start-resolved'));
+    }
+    return response;
+  },
+  (error) => {
+    if (coldStartTimer) clearTimeout(coldStartTimer);
+    if (isColdStarting) {
+      isColdStarting = false;
+      window.dispatchEvent(new CustomEvent('cold-start-resolved'));
+    }
+
+    if (error.response && error.response.status === 401) {
+      localStorage.removeItem('user');
+      window.location.href = '/';
+    }
+    return Promise.reject(error);
+  }
+);
 
 export interface FetchQuotesParams {
   page?: number;
@@ -101,12 +133,12 @@ export const adminDeleteQuote = async (id: number) => {
 };
 
 export const toggleLike = async (id: number): Promise<{ liked: boolean; count: number }> => {
-  const response = await api.post(`/quotes/${id}/like`);
+  const response = await api.put(`/quotes/${id}/like`);
   return response.data;
 };
 
 export const toggleSave = async (id: number): Promise<{ saved: boolean; count: number }> => {
-  const response = await api.post(`/quotes/${id}/save`);
+  const response = await api.put(`/quotes/${id}/save`);
   return response.data;
 };
 
@@ -169,7 +201,7 @@ export const fetchNotifications = async (page = 1) => {
 };
 
 export const markNotificationsRead = async () => {
-  const response = await api.put('/notifications/read');
+  const response = await api.patch('/notifications/read');
   return response.data;
 };
 

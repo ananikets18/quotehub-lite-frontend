@@ -1,21 +1,33 @@
-import { useEffect, useState, useRef } from 'react';
+import { Suspense, lazy, useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
-import { fetchQuotes, submitQuote, updateQuote, fetchCategories, fetchTags, fetchSavedQuotes, fetchLikedQuotes, login, signup, logout } from './api';
+import { fetchQuotes, submitQuote, updateQuote, fetchCategories, fetchTags, fetchSavedQuotes, fetchLikedQuotes } from './api';
 import { QuoteCard, QuoteCardSkeleton } from './components/QuoteCard';
 import type { Quote as QuoteType } from './components/QuoteCard';
-import { QuoteDetail } from './components/QuoteDetail';
 import { NotificationsDropdown } from './components/NotificationsDropdown';
 import { Onboarding } from './components/Onboarding';
 import { UserProfileDropdown } from './components/UserProfileDropdown';
-import { AnalyticsDashboard } from './components/AnalyticsDashboard';
-import { UserProfile } from './components/UserProfile';
-import { ResetPassword } from './components/ResetPassword';
-import { AdminDashboard } from './components/AdminDashboard';
-import { SettingsPage } from './components/SettingsPage';
-import { AboutPage, ContactPage, PrivacyPolicyPage, TermsPage, DisclaimerPage, CookiePolicyPage, FAQPage } from './components/StaticPages';
 import { Footer } from './components/Footer';
+import { AuthModals } from './components/AuthModals';
+import { useAuth } from './contexts/AuthContext';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { PenLine, Search, AlertCircle, Feather, BookOpen } from 'lucide-react';
 import './index.css';
+
+// Lazy loaded components
+const QuoteDetail = lazy(() => import('./components/QuoteDetail').then(m => ({ default: m.QuoteDetail })));
+const AnalyticsDashboard = lazy(() => import('./components/AnalyticsDashboard').then(m => ({ default: m.AnalyticsDashboard })));
+const UserProfile = lazy(() => import('./components/UserProfile').then(m => ({ default: m.UserProfile })));
+const ResetPassword = lazy(() => import('./components/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const AdminDashboard = lazy(() => import('./components/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
+const SettingsPage = lazy(() => import('./components/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const AboutPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.AboutPage })));
+const ContactPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.ContactPage })));
+const PrivacyPolicyPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.PrivacyPolicyPage })));
+const TermsPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.TermsPage })));
+const DisclaimerPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.DisclaimerPage })));
+const CookiePolicyPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.CookiePolicyPage })));
+const FAQPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.FAQPage })));
 
 type CurrentUser = {
   id: number;
@@ -47,6 +59,20 @@ function App() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [selectedTagFilter, setSelectedTagFilter] = useState('');
 
+  // Cold Start State
+  const [isWakingUp, setIsWakingUp] = useState(false);
+
+  useEffect(() => {
+    const onWake = () => setIsWakingUp(true);
+    const onResolved = () => setIsWakingUp(false);
+    window.addEventListener('cold-start-warning', onWake);
+    window.addEventListener('cold-start-resolved', onResolved);
+    return () => {
+      window.removeEventListener('cold-start-warning', onWake);
+      window.removeEventListener('cold-start-resolved', onResolved);
+    };
+  }, []);
+
   // Navbar scroll shadow
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -55,29 +81,8 @@ function App() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Auth state
-  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(() => {
-    const saved = localStorage.getItem('user');
-    const token = localStorage.getItem('token');
-    if (saved === 'undefined' || token === 'undefined') {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      return null;
-    }
-    if (!saved) return null;
-    try {
-      return JSON.parse(saved);
-    } catch {
-      localStorage.removeItem('user');
-      localStorage.removeItem('token');
-      return null;
-    }
-  });
-  const [showAuthModal, setShowAuthModal] = useState<'login' | 'signup' | 'forgot-password' | null>(null);
-  const [authForm, setAuthForm] = useState({ fullName: '', username: '', email: '', password: '', passwordConfirmation: '' });
-  const [authError, setAuthError] = useState('');
-  const [authSuccess, setAuthSuccess] = useState('');
-  const [authLoading, setAuthLoading] = useState(false);
+  // Auth state from Context
+  const { currentUser, setCurrentUser, showAuthModal, setShowAuthModal, logout: handleLogout } = useAuth();
 
   // Global toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' | 'error' } | null>(null);
@@ -264,48 +269,7 @@ function App() {
     }
   };
 
-  // Auth
-  const handleAuth = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError('');
-    setAuthLoading(true);
-    try {
-      if (showAuthModal === 'login') {
-        const data = await login({ email: authForm.email, password: authForm.password });
-        localStorage.setItem('token', data.token);
-        localStorage.setItem('user', JSON.stringify(data.user));
-        setCurrentUser(data.user);
-        setShowAuthModal(null);
-        showToast(`Welcome back, ${data.user.name}!`);
-      } else if (showAuthModal === 'signup') {
-        const res = await signup(authForm);
-        setCurrentUser(res.user);
-        localStorage.setItem('user', JSON.stringify(res.user));
-        localStorage.setItem('token', res.token);
-        setShowAuthModal(null);
-        showToast(`Welcome to Quoteshub, ${res.user.name.split(' ')[0]}!`);
-      } else if (showAuthModal === 'forgot-password') {
-        const { requestPasswordReset } = await import('./api');
-        const res = await requestPasswordReset(authForm.email);
-        setAuthSuccess(res.message || 'Password reset link sent.');
-      }
-      setAuthForm({ fullName: '', username: '', email: '', password: '', passwordConfirmation: '' });
-    } catch (err: unknown) {
-      setAuthError(getErrorMessage(err, 'Authentication failed'));
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
-  const handleLogout = async () => {
-    try { await logout(); } catch (err) { console.error(err); }
-    finally {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      setCurrentUser(null);
-      showToast('Logged out. See you soon!');
-    }
-  };
+  // Auth is now handled in AuthModals and AuthContext
 
   // Remove deleted quote from feed
   const handleQuoteDeleted = (id: number) => {
@@ -315,13 +279,19 @@ function App() {
   const closeOnOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
       setShowModal(false);
-      setShowAuthModal(null);
-      setAuthError('');
     }
   };
 
   return (
     <>
+      {/* ───── Cold Start Banner ───── */}
+      {isWakingUp && (
+        <div className="cold-start-banner" role="alert">
+          <Feather className="spin" size={16} />
+          Waking up the server... Please allow up to 50 seconds on the free tier.
+        </div>
+      )}
+
       {/* ───── Navbar ───── */}
       <nav className={`navbar${scrolled ? ' scrolled' : ''}`}>
         <div className="container navbar-inner">
@@ -378,13 +348,15 @@ function App() {
       </nav>
 
       {/* ───── Routing & Main ───── */}
-      <Routes location={backgroundLocation || location}>
-        <Route path="/" element={
-          <main>
-            <div className="container">
+      <ErrorBoundary>
+        <Suspense fallback={<div className="loading-fallback">Loading...</div>}>
+          <Routes location={backgroundLocation || location}>
+            <Route path="/" element={
+              <main>
+                <div className="container">
 
-              {/* Hero */}
-              <section className="hero">
+                  {/* Hero */}
+                  <section className="hero">
                 <div className="hero-eyebrow">
                   <Feather size={11} />
                   For writers, readers &amp; thinkers
@@ -446,7 +418,7 @@ function App() {
               {/* Error Banner */}
               {error && (
                 <div className="error-banner" role="alert">
-                  <AlertCircle size={16} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  <AlertCircle size={16} className="alert-icon" />
                   {error}
                 </div>
               )}
@@ -463,7 +435,7 @@ function App() {
                             : 'Trending Now'}
                 </h2>
                 {!searchQuery && (
-                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div className="filters-row">
                     <div className="filter-tabs" role="tablist">
                       {(['all', 'recent', 'trending', ...(currentUser ? ['saved', 'liked'] : [])] as const).map(f => (
                         <button
@@ -518,7 +490,7 @@ function App() {
                   <div className="empty-state">
                     <span className="empty-state-icon">"</span>
                     <h3>No quotes found</h3>
-                    <p style={{ fontSize: '0.875rem' }}>
+                    <p className="empty-state-text">
                       {searchQuery ? 'Try a different search term.' : 'Be the first to share a quote!'}
                     </p>
                   </div>
@@ -548,12 +520,11 @@ function App() {
 
               {/* Load More Button */}
               {!loading && displayedQuotes.length > 0 && hasMore && !searchQuery && (
-                <div style={{ display: 'flex', justifyContent: 'center', marginTop: '3rem' }}>
+                <div className="load-more-container">
                   <button
-                    className="nav-btn-outline"
+                    className="nav-btn-outline btn-load-more"
                     onClick={handleLoadMore}
                     disabled={loadingMore}
-                    style={{ padding: '0.75rem 2rem' }}
                   >
                     {loadingMore ? 'Loading...' : 'Load More'}
                   </button>
@@ -562,85 +533,88 @@ function App() {
             </div>
           </main>
         } />
-        <Route path="/quotes/:id" element={
-          <QuoteDetail
-            isModal={false}
-            currentUserId={currentUser?.id}
-            onAuthRequired={() => setShowAuthModal('login')}
-            onToast={showToast}
-          />
-        } />
-        {currentUser && (
-          <Route path="/analytics" element={
-            <main>
-              <div className="container">
-                <AnalyticsDashboard currentUserId={currentUser?.id ?? null} />
-              </div>
-            </main>
-          } />
-        )}
-        <Route path="/users/:id" element={
-          <main>
-            <div className="container">
-              <UserProfile currentUserId={currentUser?.id ?? null} />
-            </div>
-          </main>
-        } />
-        <Route path="/analytics" element={
-          <main>
-            <div className="container">
-              <AnalyticsDashboard currentUserId={currentUser?.id ?? null} />
-            </div>
-          </main>
-        } />
-        <Route path="/settings" element={
-          <main>
-            <div className="container">
-              <SettingsPage />
-            </div>
-          </main>
-        } />
-        <Route path="/about" element={<AboutPage />} />
-        <Route path="/contact" element={<ContactPage />} />
-        <Route path="/faq" element={<FAQPage />} />
-        <Route path="/privacy" element={<PrivacyPolicyPage />} />
-        <Route path="/cookies" element={<CookiePolicyPage />} />
-        <Route path="/reset-password" element={
-          <main>
-            <div className="container">
-              <ResetPassword />
-            </div>
-          </main>
-        } />
-        <Route path="/terms" element={<TermsPage />} />
-        <Route path="/disclaimer" element={<DisclaimerPage />} />
-        <Route path="/admin" element={
-          <main>
-            <AdminDashboard currentUser={currentUser as any} />
-          </main>
-        } />
-        <Route path="/:username" element={
-          <main>
-            <div className="container">
-              <UserProfile currentUserId={currentUser?.id ?? null} />
-            </div>
-          </main>
-        } />
-      </Routes>
+            <Route path="/quotes/:id" element={
+              <QuoteDetail
+                isModal={false}
+                currentUserId={currentUser?.id}
+                onAuthRequired={() => setShowAuthModal('login')}
+                onToast={showToast}
+              />
+            } />
+            <Route path="/analytics" element={
+              <ProtectedRoute>
+                <main>
+                  <div className="container">
+                    <AnalyticsDashboard currentUserId={currentUser?.id ?? null} />
+                  </div>
+                </main>
+              </ProtectedRoute>
+            } />
+            <Route path="/users/:id" element={
+              <main>
+                <div className="container">
+                  <UserProfile currentUserId={currentUser?.id ?? null} />
+                </div>
+              </main>
+            } />
+            <Route path="/settings" element={
+              <ProtectedRoute>
+                <main>
+                  <div className="container">
+                    <SettingsPage />
+                  </div>
+                </main>
+              </ProtectedRoute>
+            } />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+            <Route path="/faq" element={<FAQPage />} />
+            <Route path="/privacy" element={<PrivacyPolicyPage />} />
+            <Route path="/cookies" element={<CookiePolicyPage />} />
+            <Route path="/reset-password" element={
+              <main>
+                <div className="container">
+                  <ResetPassword />
+                </div>
+              </main>
+            } />
+            <Route path="/terms" element={<TermsPage />} />
+            <Route path="/disclaimer" element={<DisclaimerPage />} />
+            <Route path="/admin" element={
+              <ProtectedRoute requireAdmin>
+                <main>
+                  <AdminDashboard currentUser={currentUser as any} />
+                </main>
+              </ProtectedRoute>
+            } />
+            <Route path="/u/:username" element={
+              <main>
+                <div className="container">
+                  <UserProfile currentUserId={currentUser?.id ?? null} />
+                </div>
+              </main>
+            } />
+          </Routes>
+        </Suspense>
+      </ErrorBoundary>
 
       <Footer />
 
       {backgroundLocation && (
-        <Routes>
-          <Route path="/quotes/:id" element={
-            <QuoteDetail
-              isModal={true}
-              currentUserId={currentUser?.id}
-              onAuthRequired={() => setShowAuthModal('login')}
-              onToast={showToast}
-            />
-          } />
-        </Routes>
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <Routes>
+              <Route path="/quotes/:id" element={
+                <QuoteDetail
+                  isModal={true}
+                  currentUserId={currentUser?.id}
+                  onAuthRequired={() => setShowAuthModal('login')}
+                  onToast={showToast}
+                />
+              } />
+            </Routes>
+          </Suspense>
+        </ErrorBoundary>
       )}
 
       {/* ───── Footer ───── */}
@@ -698,7 +672,7 @@ function App() {
                     maxLength={255}
                   />
                 </div>
-                <div className="form-group" style={{ marginBottom: 0 }}>
+                <div className="form-group form-group-mb0">
                   <label className="form-label" htmlFor="quote-source">Source</label>
                   <input
                     id="quote-source"
@@ -710,8 +684,8 @@ function App() {
                     maxLength={255}
                   />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
+                <div className="form-row">
+                  <div className="form-group form-group-mb0">
                     <label className="form-label" htmlFor="quote-categories">Categories (Select multiple)</label>
                     <select
                       id="quote-categories"
@@ -729,7 +703,7 @@ function App() {
                       ))}
                     </select>
                   </div>
-                  <div className="form-group" style={{ marginBottom: 0 }}>
+                  <div className="form-group form-group-mb0">
                     <label className="form-label" htmlFor="quote-tags">Tags (Select multiple)</label>
                     <select
                       id="quote-tags"
@@ -777,164 +751,7 @@ function App() {
       )}
 
       {/* ───── Auth Modal ───── */}
-      {showAuthModal && (
-        <div className="modal-overlay" onClick={closeOnOverlayClick} role="dialog" aria-modal="true" aria-label="Authentication">
-          <div className="modal">
-            <div className="modal-header">
-              <h2 className="modal-title">
-                {showAuthModal === 'login' ? 'Welcome Back' 
-                 : showAuthModal === 'forgot-password' ? 'Reset Password' 
-                 : 'Join Quoteshub'}
-              </h2>
-              <p className="modal-subtitle">
-                {showAuthModal === 'login'
-                  ? 'Sign in to save, share and curate quotes.'
-                  : showAuthModal === 'forgot-password'
-                  ? 'Enter your email and we will send you a reset link.'
-                  : 'Create your free account in seconds.'}
-              </p>
-            </div>
-            <form onSubmit={handleAuth}>
-              <div className="modal-body">
-                {authError && (
-                  <div className="form-alert error" role="alert">
-                    <AlertCircle size={15} />
-                    {authError}
-                  </div>
-                )}
-                {authSuccess && (
-                  <div className="form-alert success" role="alert" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
-                    {authSuccess}
-                  </div>
-                )}
-
-                {showAuthModal === 'signup' && (
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="auth-name">Full Name *</label>
-                    <input
-                      id="auth-name"
-                      required
-                      type="text"
-                      className="form-input"
-                      value={authForm.fullName}
-                      onChange={e => setAuthForm({ ...authForm, fullName: e.target.value })}
-                      placeholder="Your full name"
-                      autoComplete="name"
-                      autoFocus
-                    />
-                  </div>
-                )}
-
-                {showAuthModal === 'signup' && (
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="auth-username">Username *</label>
-                    <input
-                      id="auth-username"
-                      required
-                      type="text"
-                      className="form-input"
-                      value={authForm.username}
-                      onChange={e => setAuthForm({ ...authForm, username: e.target.value })}
-                      placeholder="e.g. quote_lover"
-                      pattern="[a-zA-Z0-9]+"
-                      title="Only alphanumeric characters are allowed"
-                      autoComplete="username"
-                    />
-                  </div>
-                )}
-
-                <div className="form-group">
-                  <label className="form-label" htmlFor="auth-email">Email *</label>
-                  <input
-                    id="auth-email"
-                    required
-                    type="email"
-                    className="form-input"
-                    value={authForm.email}
-                    onChange={e => setAuthForm({ ...authForm, email: e.target.value })}
-                    placeholder="you@example.com"
-                    autoComplete={showAuthModal === 'login' ? 'email' : 'username'}
-                    autoFocus={showAuthModal === 'login'}
-                  />
-                </div>
-
-                {showAuthModal !== 'forgot-password' && (
-                  <div className="form-group">
-                    <label className="form-label" htmlFor="auth-password">Password *</label>
-                    <input
-                      id="auth-password"
-                      required
-                      type="password"
-                      className="form-input"
-                      value={authForm.password}
-                      onChange={e => setAuthForm({ ...authForm, password: e.target.value })}
-                      placeholder="Min. 8 characters"
-                      autoComplete={showAuthModal === 'login' ? 'current-password' : 'new-password'}
-                      minLength={8}
-                    />
-                  </div>
-                )}
-
-                {showAuthModal === 'signup' && (
-                  <div className="form-group" style={{ marginBottom: 0 }}>
-                    <label className="form-label" htmlFor="auth-confirm-password">Confirm Password *</label>
-                    <input
-                      id="auth-confirm-password"
-                      required
-                      type="password"
-                      className="form-input"
-                      value={authForm.passwordConfirmation}
-                      onChange={e => setAuthForm({ ...authForm, passwordConfirmation: e.target.value })}
-                      placeholder="Repeat password"
-                      autoComplete="new-password"
-                    />
-                  </div>
-                )}
-              </div>
-
-              <div className="modal-footer" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-                  <button type="button" className="btn-cancel" onClick={() => { setShowAuthModal(null); setAuthError(''); setAuthSuccess(''); }}>
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="btn-submit"
-                    disabled={authLoading}
-                    id={showAuthModal === 'login' ? 'btn-login' : showAuthModal === 'forgot-password' ? 'btn-reset' : 'btn-signup'}
-                  >
-                    {authLoading
-                      ? 'Please wait…'
-                      : showAuthModal === 'login' ? 'Sign In' : showAuthModal === 'forgot-password' ? 'Send Link' : 'Create Account'
-                    }
-                  </button>
-                </div>
-                <div className="auth-switch">
-                  {showAuthModal === 'login' ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'center' }}>
-                      <div>
-                        Don't have an account?{' '}
-                        <button type="button" onClick={() => { setShowAuthModal('signup'); setAuthError(''); }}>
-                          Sign up free
-                        </button>
-                      </div>
-                      <button type="button" onClick={() => { setShowAuthModal('forgot-password'); setAuthError(''); }} style={{ fontSize: '0.875rem' }}>
-                        Forgot your password?
-                      </button>
-                    </div>
-                  ) : (
-                    <>Already a member?{' '}
-                      <button type="button" onClick={() => { setShowAuthModal('login'); setAuthError(''); setAuthSuccess(''); }}>
-                        Sign in
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <AuthModals onToast={showToast} />
     </>
   );
 }

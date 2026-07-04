@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Heart, Bookmark, Share2, MoreHorizontal, Copy, Flag, UserCircle2, Trash2, Check, X, Shield, Link as LinkIcon } from 'lucide-react';
 import { toggleLike, toggleSave, deleteQuote, adminDeleteQuote } from '../api';
+import './QuoteCard.css';
 
 const XIcon = ({ size = 14 }: { size?: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" stroke="none">

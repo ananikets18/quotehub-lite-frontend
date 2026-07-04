@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { updateProfile, deleteAccount, fetchAccountProfile } from '../api';
 import { User, AlertTriangle } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import './SettingsPage.css';
 
 export function SettingsPage() {
@@ -11,6 +12,7 @@ export function SettingsPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const { currentUser, setCurrentUser, logout } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     bio: '',
@@ -20,8 +22,7 @@ export function SettingsPage() {
   useEffect(() => {
     const loadProfile = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
+        if (!currentUser) {
           navigate('/');
           return;
         }
@@ -57,14 +58,11 @@ export function SettingsPage() {
       await updateProfile({ name: formData.name, bio: formData.bio });
       setSuccess('Profile updated successfully!');
       
-      // Update local storage user if needed
-      const userStr = localStorage.getItem('user');
-      if (userStr) {
-        const user = JSON.parse(userStr);
-        user.name = formData.name;
-        localStorage.setItem('user', JSON.stringify(user));
-        // Force reload to update App state if needed, or rely on the user to see changes when navigating
-        setTimeout(() => window.location.reload(), 1500);
+      // Update AuthContext state
+      if (currentUser) {
+        const updatedUser = { ...currentUser, name: formData.name };
+        setCurrentUser(updatedUser);
+        localStorage.setItem('user', JSON.stringify(updatedUser));
       }
     } catch (err: any) {
       setError(err.response?.data?.errors?.[0]?.message || 'Failed to update profile.');
@@ -80,9 +78,7 @@ export function SettingsPage() {
     setDeleting(true);
     try {
       await deleteAccount();
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/';
+      await logout();
     } catch (err) {
       setError('Failed to delete account. Please try again later.');
       setDeleting(false);

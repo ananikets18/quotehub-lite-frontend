@@ -1,0 +1,27 @@
+/* ══════════════════════════════════════════
+   EMPTY STATE
+══════════════════════════════════════════ */
+.empty-state {
+  column-span: all;
+  text-align: center;
+  padding: 5rem 2rem;
+  color: var(--text-muted);
+}
+
+.empty-state-icon {
+  font-family: 'DM Serif Display', serif;
+  font-size: 5rem;
+  color: var(--gold);
+  opacity: 0.2;
+  display: block;
+  margin-bottom: 1.25rem;
+  line-height: 1;
+}
+
+.empty-state h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-bottom: 0.5rem;
+}
