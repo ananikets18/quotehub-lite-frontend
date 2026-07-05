@@ -29,14 +29,6 @@ const DisclaimerPage = lazy(() => import('./components/StaticPages').then(m => (
 const CookiePolicyPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.CookiePolicyPage })));
 const FAQPage = lazy(() => import('./components/StaticPages').then(m => ({ default: m.FAQPage })));
 
-type CurrentUser = {
-  id: number;
-  name: string;
-  username?: string;
-  email?: string;
-  isOnboarded?: boolean;
-};
-
 const getErrorMessage = (err: unknown, fallback: string) => {
   if (err && typeof err === 'object') {
     const maybe = err as { response?: { data?: { errors?: { message?: string }[] } } };
@@ -82,7 +74,7 @@ function App() {
   }, []);
 
   // Auth state from Context
-  const { currentUser, setCurrentUser, showAuthModal, setShowAuthModal, logout: handleLogout } = useAuth();
+  const { currentUser, setCurrentUser, setShowAuthModal, logout: handleLogout } = useAuth();
 
   // Global toast
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'info' | 'error' } | null>(null);
