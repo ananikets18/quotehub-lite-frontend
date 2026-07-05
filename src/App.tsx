@@ -114,8 +114,8 @@ function App() {
     const loadFilters = async () => {
       try {
         const [cats, tgs] = await Promise.all([fetchCategories(), fetchTags()]);
-        setCategories(cats.data || cats);
-        setTags(tgs.data || tgs);
+        setCategories(Array.isArray(cats) ? cats : (Array.isArray(cats.data) ? cats.data : (cats.categories || cats.data?.data || [])));
+        setTags(Array.isArray(tgs) ? tgs : (Array.isArray(tgs.data) ? tgs.data : (tgs.tags || tgs.data?.data || [])));
       } catch (err) {
         console.error('Failed to load filters', err);
       }
@@ -145,7 +145,7 @@ function App() {
         
         const data = Array.isArray(response)
           ? response
-          : response.data || response.data?.data || [];
+          : (Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.data) ? response.data.data : []));
         
         // Client-side sorting for recent/trending as a fallback if not handled by backend
         let sorted = [...data];
@@ -194,7 +194,7 @@ function App() {
       
       const data = Array.isArray(response)
         ? response
-        : response.data || response.data?.data || [];
+        : (Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.data) ? response.data.data : []));
       
       if (data.length === 0) {
         setHasMore(false);
