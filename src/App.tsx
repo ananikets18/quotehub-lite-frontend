@@ -52,18 +52,6 @@ function App() {
   const [selectedTagFilter, setSelectedTagFilter] = useState('');
 
   // Cold Start State
-  const [isWakingUp, setIsWakingUp] = useState(false);
-
-  useEffect(() => {
-    const onWake = () => setIsWakingUp(true);
-    const onResolved = () => setIsWakingUp(false);
-    window.addEventListener('cold-start-warning', onWake);
-    window.addEventListener('cold-start-resolved', onResolved);
-    return () => {
-      window.removeEventListener('cold-start-warning', onWake);
-      window.removeEventListener('cold-start-resolved', onResolved);
-    };
-  }, []);
 
   // Navbar scroll shadow
   const [scrolled, setScrolled] = useState(false);
@@ -276,13 +264,7 @@ function App() {
 
   return (
     <>
-      {/* ───── Cold Start Banner ───── */}
-      {isWakingUp && (
-        <div className="cold-start-banner" role="alert">
-          <Feather className="spin" size={16} />
-          Waking up the server... Please allow up to 50 seconds on the free tier.
-        </div>
-      )}
+      
 
       {/* ───── Navbar ───── */}
       <nav className={`navbar${scrolled ? ' scrolled' : ''}`}>

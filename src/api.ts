@@ -38,39 +38,9 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// Cold Start Detection
-let coldStartTimer: ReturnType<typeof setTimeout> | null = null;
-let isColdStarting = false;
-
-// Request interceptor: start timer
-api.interceptors.request.use((config) => {
-  // If we're not already showing the warning, start a timer
-  if (!isColdStarting) {
-    coldStartTimer = setTimeout(() => {
-      isColdStarting = true;
-      window.dispatchEvent(new CustomEvent('cold-start-warning'));
-    }, 4000); // Trigger after 4 seconds of waiting
-  }
-  return config;
-});
-
-// Response interceptor: clear timer and resolve
 api.interceptors.response.use(
-  (response) => {
-    if (coldStartTimer) clearTimeout(coldStartTimer);
-    if (isColdStarting) {
-      isColdStarting = false;
-      window.dispatchEvent(new CustomEvent('cold-start-resolved'));
-    }
-    return response;
-  },
+  (response) => response,
   (error) => {
-    if (coldStartTimer) clearTimeout(coldStartTimer);
-    if (isColdStarting) {
-      isColdStarting = false;
-      window.dispatchEvent(new CustomEvent('cold-start-resolved'));
-    }
-
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('user');
       window.location.href = '/';
