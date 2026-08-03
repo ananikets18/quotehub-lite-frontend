@@ -2,38 +2,54 @@ import { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Shield, Trash2, Users } from 'lucide-react';
 import { getAdminUsers, adminDeleteUser, type User } from '../api';
+import type { CurrentUser } from '../contexts/AuthContext';
 
 interface AdminDashboardProps {
-  currentUser: User | null;
+  currentUser: Pick<CurrentUser, 'role'> | null;
 }
 
 export function AdminDashboard({ currentUser }: AdminDashboardProps) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // If not logged in or not an admin, boot them out
-  if (!currentUser || currentUser.role !== 'admin') {
-    return <Navigate to="/" replace />;
-  }
+  const isAdmin = currentUser?.role === 'admin';
 
   useEffect(() => {
-    fetchUsers();
-  }, []);
+    if (!isAdmin) return;
 
-  const fetchUsers = async () => {
-    try {
-      setLoading(true);
-      const data = await getAdminUsers();
-      setUsers(data);
-      setError(null);
-    } catch (err) {
-      console.error('Failed to fetch users:', err);
-      setError('Failed to load users. Are you sure you have admin privileges?');
-    } finally {
-      setLoading(false);
-    }
-  };
+    let cancelled = false;
+
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        const data = await getAdminUsers();
+        if (!cancelled) {
+          setUsers(data);
+          setError(null);
+        }
+      } catch (err) {
+        console.error('Failed to fetch users:', err);
+        if (!cancelled) {
+          setError('Failed to load users. Are you sure you have admin privileges?');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin]);
+
+  // If not logged in or not an admin, boot them out
+  if (!currentUser || !isAdmin) {
+    return <Navigate to="/" replace />;
+  }
 
   const handleDeleteUser = async (userId: number, email: string) => {
     const confirm = window.confirm(`Are you sure you want to permanently delete user ${email} and all their quotes? This cannot be undone.`);
@@ -99,7 +115,7 @@ export function AdminDashboard({ currentUser }: AdminDashboardProps) {
                       </span>
                     </td>
                     <td style={{ padding: '1rem', color: 'var(--text-secondary)' }}>
-                      {(user as any).totalQuotes || 0}
+                      {(user as User & { totalQuotes?: number }).totalQuotes ?? 0}
                     </td>
                     <td style={{ padding: '1rem', textAlign: 'right' }}>
                       {user.role !== 'admin' && (

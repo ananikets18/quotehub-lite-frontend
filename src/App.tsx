@@ -136,7 +136,7 @@ function App() {
           : (Array.isArray(response?.data) ? response.data : (Array.isArray(response?.data?.data) ? response.data.data : []));
         
         // Client-side sorting for recent/trending as a fallback if not handled by backend
-        let sorted = [...data];
+        const sorted = [...data];
         if (activeFilter === 'recent') {
           sorted.sort((a, b) => {
             const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
@@ -557,7 +557,7 @@ function App() {
             <Route path="/admin" element={
               <ProtectedRoute requireAdmin>
                 <main>
-                  <AdminDashboard currentUser={currentUser as any} />
+                  <AdminDashboard currentUser={currentUser ? { role: currentUser.role } : null} />
                 </main>
               </ProtectedRoute>
             } />
