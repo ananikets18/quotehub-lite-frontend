@@ -93,6 +93,9 @@ export const QuoteCard = ({
   const [shareMenuOpen, setShareMenuOpen] = useState(false);
   const shareMenuRef = useRef<HTMLDivElement>(null);
 
+  // ── Report state ──────────────────────────────────────────────────────
+  const [isReported, setIsReported] = useState(false);
+
   // Close menu on outside click
   useEffect(() => {
     if (!menuOpen) return;
@@ -202,7 +205,12 @@ export const QuoteCard = ({
 
   const handleReport = () => {
     setMenuOpen(false);
-    onToast?.('Thanks for the report. We will review it shortly.', 'info');
+    if (isReported) {
+      onToast?.('You have already reported this quote.', 'info');
+      return;
+    }
+    setIsReported(true);
+    onToast?.('Quote reported for review. Thank you for keeping the community safe.', 'success');
   };
 
   const handleViewAuthor = () => {
@@ -385,9 +393,9 @@ export const QuoteCard = ({
               </button>
 
               {/* Report */}
-              <button className="dropdown-item" role="menuitem" onClick={handleReport}>
-                <Flag size={14} />
-                Report
+              <button className="dropdown-item" role="menuitem" onClick={handleReport} disabled={isReported}>
+                <Flag size={14} style={{ color: isReported ? 'var(--gold)' : 'inherit' }} />
+                {isReported ? 'Reported' : 'Report'}
               </button>
 
               {/* Delete & Edit (owner only) */}
