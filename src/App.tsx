@@ -11,7 +11,7 @@ import { AuthModals } from './components/AuthModals';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { PenLine, Search, AlertCircle, Feather, BookOpen } from 'lucide-react';
+import { PenLine, Search, AlertCircle, Feather, BookOpen, Sun, Moon } from 'lucide-react';
 import './index.css';
 
 // Lazy loaded components
@@ -53,6 +53,20 @@ function App() {
 
   // Cold Start State
 
+  // Theme State
+  const [isLightMode, setIsLightMode] = useState(() => {
+    return localStorage.getItem('theme') === 'light';
+  });
+
+  useEffect(() => {
+    if (isLightMode) {
+      document.documentElement.classList.add('light-theme');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.documentElement.classList.remove('light-theme');
+      localStorage.setItem('theme', 'dark');
+    }
+  }, [isLightMode]);
   // Navbar scroll shadow
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -286,6 +300,14 @@ function App() {
 
           {/* Actions */}
           <div className="navbar-actions">
+            <button
+              className="nav-btn-ghost"
+              onClick={() => setIsLightMode(!isLightMode)}
+              aria-label="Toggle theme"
+              style={{ padding: '8px' }}
+            >
+              {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
             {currentUser ? (
               <>
                 <NotificationsDropdown />
