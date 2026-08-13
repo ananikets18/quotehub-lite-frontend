@@ -11,7 +11,7 @@ import { AuthModals } from './components/AuthModals';
 import { useAuth } from './contexts/AuthContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { PenLine, Search, AlertCircle, Feather, BookOpen } from 'lucide-react';
+import { PenLine, Search, AlertCircle, Feather, BookOpen, Sun, Moon } from 'lucide-react';
 import './index.css';
 
 // Lazy loaded components
@@ -50,9 +50,26 @@ function App() {
   const [tags, setTags] = useState<{id: number, name: string}[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [selectedTagFilter, setSelectedTagFilter] = useState('');
+  const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('');
+
+  const uniqueAuthors = Array.from(new Set(quotes.map(q => q.author || q.user?.name || 'Unknown'))).filter(Boolean).sort();
 
   // Cold Start State
 
+  // Theme State
+  const [isLightMode, setIsLightMode] = useState(() => {
+    return localStorage.getItem('theme') === 'light';
+  });
+
+  useEffect(() => {
+    if (isLightMode) {
+      document.documentElement.classList.add('light-theme');
+      localStorage.setItem('theme', 'light');
+    } else {
+      document.documentElement.classList.remove('light-theme');
+      localStorage.setItem('theme', 'dark');
+    }
+  }, [isLightMode]);
   // Navbar scroll shadow
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
@@ -202,7 +219,9 @@ function App() {
     }
   };
 
-  const displayedQuotes = quotes;
+  const displayedQuotes = selectedAuthorFilter 
+    ? quotes.filter(q => (q.author || q.user?.name || 'Unknown') === selectedAuthorFilter)
+    : quotes;
 
   // Submit quote (Create or Edit)
   const handleSubmitQuote = async (e: React.FormEvent) => {
@@ -286,6 +305,14 @@ function App() {
 
           {/* Actions */}
           <div className="navbar-actions">
+            <button
+              className="nav-btn-ghost"
+              onClick={() => setIsLightMode(!isLightMode)}
+              aria-label="Toggle theme"
+              style={{ padding: '8px' }}
+            >
+              {isLightMode ? <Moon size={18} /> : <Sun size={18} />}
+            </button>
             {currentUser ? (
               <>
                 <NotificationsDropdown />
@@ -389,6 +416,20 @@ function App() {
                 </div>
               </section>
 
+              {/* Quote of the Day Banner */}
+              {!searchQuery && quotes.length > 0 && (
+                <div className="qotd-banner">
+                  <div className="qotd-header">
+                    <Feather size={14} className="qotd-icon" />
+                    <span>Quote of the Day</span>
+                  </div>
+                  <blockquote className="qotd-content">
+                    "Words are, of course, the most powerful drug used by mankind."
+                  </blockquote>
+                  <cite className="qotd-author">— Rudyard Kipling</cite>
+                </div>
+              )}
+
               {/* Error Banner */}
               {error && (
                 <div className="error-banner" role="alert">
@@ -448,6 +489,17 @@ function App() {
                             <option key={t.id} value={t.id}>{t.name}</option>
                           ))}
                         </select>
+                        <select
+                          className="header-select"
+                          value={selectedAuthorFilter}
+                          onChange={(e) => setSelectedAuthorFilter(e.target.value)}
+                          aria-label="Filter by author"
+                        >
+                          <option value="">All Authors</option>
+                          {uniqueAuthors.map(author => (
+                            <option key={author} value={author}>{author}</option>
+                          ))}
+                        </select>
                       </div>
                     )}
                   </div>
@@ -462,11 +514,34 @@ function App() {
                   ))
                 ) : displayedQuotes.length === 0 ? (
                   <div className="empty-state">
-                    <span className="empty-state-icon">"</span>
-                    <h3>No quotes found</h3>
+                    <span className="empty-state-icon" style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: 'var(--gold)'}}>
+                      <Feather size={48} />
+                    </span>
+                    <h3>It's pretty quiet here...</h3>
                     <p className="empty-state-text">
-                      {searchQuery ? 'Try a different search term.' : 'Be the first to share a quote!'}
+                      {searchQuery ? `We couldn't find any quotes matching "${searchQuery}".` : 'Be the first to share a quote and inspire others!'}
                     </p>
+                    {!searchQuery && (
+                      <button 
+                        className="btn-hero-primary" 
+                        style={{marginTop: '1.5rem'}}
+                        onClick={() => {
+                          if (currentUser) {
+                            setEditingQuote(null);
+                            setNewQuoteContent('');
+                            setNewQuoteAuthor('');
+                            setNewQuoteSource('');
+                            setNewQuoteCategories([]);
+                            setNewQuoteTags([]);
+                            setShowModal(true);
+                          } else {
+                            setShowAuthModal('login');
+                          }
+                        }}
+                      >
+                        {currentUser ? 'Share a Quote' : 'Sign in to Share'}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   displayedQuotes.map((quote, index) => (
@@ -621,7 +696,12 @@ function App() {
             <form onSubmit={handleSubmitQuote}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="quote-content">Quote *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <label className="form-label" htmlFor="quote-content">Quote *</label>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {newQuoteContent.length} / 2000
+                    </span>
+                  </div>
                   <textarea
                     id="quote-content"
                     required

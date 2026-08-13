@@ -57,6 +57,28 @@
   --ease-spring: 400ms cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
+/* -- Light Theme Overrides -- */
+.light-theme {
+  --bg-primary:    #f5f5f5;
+  --bg-secondary:  #ffffff;
+  --bg-card:       #ffffff;
+  --bg-card-hover: #fafafa;
+  --bg-glass:      rgba(245, 245, 245, 0.85);
+  --bg-modal:      #ffffff;
+  --bg-input:      #f0f0f0;
+
+  --text-primary:   #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --text-muted:     #6a6a6a;
+  --text-inverse:   #ffffff;
+
+  --border-subtle:  rgba(0, 0, 0, 0.1);
+  --border-card:    rgba(0, 0, 0, 0.08);
+
+  --shadow-card:    0 4px 24px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0,0,0,0.05);
+  --shadow-hover:   0 12px 40px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0,0,0,0.08);
+}
+
 /* -- Reset -- */
 *, *::before, *::after {
   box-sizing: border-box;
