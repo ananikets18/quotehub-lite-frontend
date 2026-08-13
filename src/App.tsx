@@ -416,6 +416,20 @@ function App() {
                 </div>
               </section>
 
+              {/* Quote of the Day Banner */}
+              {!searchQuery && quotes.length > 0 && (
+                <div className="qotd-banner">
+                  <div className="qotd-header">
+                    <Feather size={14} className="qotd-icon" />
+                    <span>Quote of the Day</span>
+                  </div>
+                  <blockquote className="qotd-content">
+                    "Words are, of course, the most powerful drug used by mankind."
+                  </blockquote>
+                  <cite className="qotd-author">— Rudyard Kipling</cite>
+                </div>
+              )}
+
               {/* Error Banner */}
               {error && (
                 <div className="error-banner" role="alert">
