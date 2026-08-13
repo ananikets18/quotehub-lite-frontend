@@ -412,6 +412,15 @@ export const QuoteCard = ({
               </div>
             )}
           </div>
+          {/* Share to X */}
+          <button
+            className="card-action-btn"
+            onClick={(e) => { e.stopPropagation(); handleShareToX(); }}
+            title="Share to X"
+            aria-label="Share quote to X"
+          >
+            <XIcon size={16} />
+          </button>
           {/* Copy to Clipboard */}
           <button
             className="card-action-btn"
