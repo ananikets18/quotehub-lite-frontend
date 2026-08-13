@@ -210,3 +210,58 @@
     justify-content: center;
   }
 }
+
+/* ══════════════════════════════════════════
+   QUOTE OF THE DAY BANNER
+══════════════════════════════════════════ */
+.qotd-banner {
+  background: var(--bg-card);
+  border: 1px solid var(--border-card);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 2rem;
+  margin: 0 auto 3rem auto;
+  max-width: 800px;
+  text-align: center;
+  position: relative;
+  box-shadow: var(--shadow-card);
+  animation: fadeSlideUp 0.6s ease-out 0.5s both;
+}
+
+.qotd-banner::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--gradient-gold);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.qotd-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--gold);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 1rem;
+}
+
+.qotd-content {
+  font-family: 'DM Serif Display', serif;
+  font-size: 1.25rem;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+  line-height: 1.5;
+  font-style: italic;
+}
+
+.qotd-author {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
