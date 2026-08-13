@@ -484,11 +484,34 @@ function App() {
                   ))
                 ) : displayedQuotes.length === 0 ? (
                   <div className="empty-state">
-                    <span className="empty-state-icon">"</span>
-                    <h3>No quotes found</h3>
+                    <span className="empty-state-icon" style={{display: 'inline-flex', alignItems: 'center', justifyContent: 'center', marginBottom: '1rem', color: 'var(--gold)'}}>
+                      <Feather size={48} />
+                    </span>
+                    <h3>It's pretty quiet here...</h3>
                     <p className="empty-state-text">
-                      {searchQuery ? 'Try a different search term.' : 'Be the first to share a quote!'}
+                      {searchQuery ? `We couldn't find any quotes matching "${searchQuery}".` : 'Be the first to share a quote and inspire others!'}
                     </p>
+                    {!searchQuery && (
+                      <button 
+                        className="btn-hero-primary" 
+                        style={{marginTop: '1.5rem'}}
+                        onClick={() => {
+                          if (currentUser) {
+                            setEditingQuote(null);
+                            setNewQuoteContent('');
+                            setNewQuoteAuthor('');
+                            setNewQuoteSource('');
+                            setNewQuoteCategories([]);
+                            setNewQuoteTags([]);
+                            setShowModal(true);
+                          } else {
+                            setShowAuthModal('login');
+                          }
+                        }}
+                      >
+                        {currentUser ? 'Share a Quote' : 'Sign in to Share'}
+                      </button>
+                    )}
                   </div>
                 ) : (
                   displayedQuotes.map((quote, index) => (
