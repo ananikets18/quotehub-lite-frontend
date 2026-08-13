@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Heart, Bookmark, Share2, MoreHorizontal, Copy, Flag, UserCircle2, Trash2, Check, X, Shield, Link as LinkIcon } from 'lucide-react';
+import { Heart, Bookmark, Share2, MoreHorizontal, Copy, Flag, UserCircle2, Trash2, Check, X, Shield, Link as LinkIcon, Download } from 'lucide-react';
 import { toggleLike, toggleSave, deleteQuote, adminDeleteQuote } from '../api';
 import './QuoteCard.css';
 
@@ -200,6 +200,59 @@ export const QuoteCard = ({
     await copyToClipboard(quote.content, 'Quote copied!');
   };
 
+  const handleDownloadImage = () => {
+    setMenuOpen(false);
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = 1080;
+      canvas.height = 1080;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.fillStyle = '#16162a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#f0ead6';
+      ctx.font = 'italic 48px "DM Serif Display", serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+
+      const words = quote.content.split(' ');
+      let line = '';
+      const lines = [];
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > 800 && n > 0) {
+          lines.push(line);
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line);
+
+      const lineHeight = 60;
+      const startY = (canvas.height / 2) - 100 - ((lines.length - 1) * lineHeight) / 2;
+      lines.forEach((l, i) => {
+        ctx.fillText(l, canvas.width / 2, startY + i * lineHeight);
+      });
+
+      ctx.font = '500 32px Inter, sans-serif';
+      ctx.fillStyle = '#d4a853';
+      ctx.fillText(`— ${authorName}`, canvas.width / 2, startY + lines.length * lineHeight + 60);
+
+      const link = document.createElement('a');
+      link.download = `quote-${quote.id}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+      onToast?.('Quote image downloaded!', 'success');
+    } catch {
+      onToast?.('Failed to generate image.', 'error');
+    }
+  };
+
   const handleReport = () => {
     setMenuOpen(false);
     onToast?.('Thanks for the report. We will review it shortly.', 'info');
@@ -382,6 +435,12 @@ export const QuoteCard = ({
               <button className="dropdown-item" role="menuitem" onClick={handleCopyQuote}>
                 <Copy size={14} />
                 Copy Quote
+              </button>
+
+              {/* Download Image */}
+              <button className="dropdown-item" role="menuitem" onClick={handleDownloadImage}>
+                <Download size={14} />
+                Download Image
               </button>
 
               {/* View Author */}
