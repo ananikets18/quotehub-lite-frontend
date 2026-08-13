@@ -50,6 +50,9 @@ function App() {
   const [tags, setTags] = useState<{id: number, name: string}[]>([]);
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [selectedTagFilter, setSelectedTagFilter] = useState('');
+  const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('');
+
+  const uniqueAuthors = Array.from(new Set(quotes.map(q => q.author || q.user?.name || 'Unknown'))).filter(Boolean).sort();
 
   // Cold Start State
 
@@ -202,7 +205,9 @@ function App() {
     }
   };
 
-  const displayedQuotes = quotes;
+  const displayedQuotes = selectedAuthorFilter 
+    ? quotes.filter(q => (q.author || q.user?.name || 'Unknown') === selectedAuthorFilter)
+    : quotes;
 
   // Submit quote (Create or Edit)
   const handleSubmitQuote = async (e: React.FormEvent) => {
@@ -446,6 +451,17 @@ function App() {
                           <option value="">All Tags</option>
                           {tags.map(t => (
                             <option key={t.id} value={t.id}>{t.name}</option>
+                          ))}
+                        </select>
+                        <select
+                          className="header-select"
+                          value={selectedAuthorFilter}
+                          onChange={(e) => setSelectedAuthorFilter(e.target.value)}
+                          aria-label="Filter by author"
+                        >
+                          <option value="">All Authors</option>
+                          {uniqueAuthors.map(author => (
+                            <option key={author} value={author}>{author}</option>
                           ))}
                         </select>
                       </div>
