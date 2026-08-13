@@ -696,7 +696,12 @@ function App() {
             <form onSubmit={handleSubmitQuote}>
               <div className="modal-body">
                 <div className="form-group">
-                  <label className="form-label" htmlFor="quote-content">Quote *</label>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                    <label className="form-label" htmlFor="quote-content">Quote *</label>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {newQuoteContent.length} / 2000
+                    </span>
+                  </div>
                   <textarea
                     id="quote-content"
                     required
