@@ -51,6 +51,7 @@ function App() {
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState('');
   const [selectedTagFilter, setSelectedTagFilter] = useState('');
   const [selectedAuthorFilter, setSelectedAuthorFilter] = useState('');
+  const [sortOrder, setSortOrder] = useState<'default' | 'oldest' | 'a-z' | 'z-a'>('default');
 
   const uniqueAuthors = Array.from(new Set(quotes.map(q => q.author || q.user?.name || 'Unknown'))).filter(Boolean).sort();
 
@@ -219,9 +220,22 @@ function App() {
     }
   };
 
-  const displayedQuotes = selectedAuthorFilter 
+  const filteredQuotes = selectedAuthorFilter 
     ? quotes.filter(q => (q.author || q.user?.name || 'Unknown') === selectedAuthorFilter)
     : quotes;
+
+  const displayedQuotes = [...filteredQuotes].sort((a, b) => {
+    if (sortOrder === 'oldest') {
+      return (a.createdAt ? new Date(a.createdAt).getTime() : 0) - (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+    }
+    if (sortOrder === 'a-z') {
+      return a.content.localeCompare(b.content);
+    }
+    if (sortOrder === 'z-a') {
+      return b.content.localeCompare(a.content);
+    }
+    return 0;
+  });
 
   // Submit quote (Create or Edit)
   const handleSubmitQuote = async (e: React.FormEvent) => {
@@ -499,6 +513,17 @@ function App() {
                           {uniqueAuthors.map(author => (
                             <option key={author} value={author}>{author}</option>
                           ))}
+                        </select>
+                        <select
+                          className="header-select"
+                          value={sortOrder}
+                          onChange={(e) => setSortOrder(e.target.value as any)}
+                          aria-label="Sort Order"
+                        >
+                          <option value="default">Default Sort</option>
+                          <option value="oldest">Oldest First</option>
+                          <option value="a-z">A - Z</option>
+                          <option value="z-a">Z - A</option>
                         </select>
                       </div>
                     )}
