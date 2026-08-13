@@ -348,13 +348,19 @@ export const QuoteCard = ({
                   <LinkIcon size={14} />
                   Copy Link
                 </button>
-                <button className="dropdown-item" role="menuitem" onClick={(e) => { e.stopPropagation(); handleShareToX(); }}>
-                  <XIcon size={14} />
-                  Share to X
-                </button>
               </div>
             )}
           </div>
+
+          {/* Share to X */}
+          <button
+            className="card-action-btn"
+            onClick={(e) => { e.stopPropagation(); handleShareToX(); }}
+            title="Share to X"
+            aria-label="Share quote to X"
+          >
+            <XIcon size={16} />
+          </button>
         </div>
 
         {/* 3-dot menu */}
