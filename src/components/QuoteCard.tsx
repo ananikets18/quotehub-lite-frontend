@@ -355,6 +355,16 @@ export const QuoteCard = ({
               </div>
             )}
           </div>
+
+          {/* Copy to Clipboard */}
+          <button
+            className="card-action-btn"
+            onClick={(e) => { e.stopPropagation(); handleCopyQuote(); }}
+            title="Copy Quote"
+            aria-label="Copy quote to clipboard"
+          >
+            <Copy />
+          </button>
         </div>
 
         {/* 3-dot menu */}
